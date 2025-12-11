@@ -1,4 +1,4 @@
-import { Shield, LayoutDashboard, RefreshCw, BarChart3, LogOut, Building2, FileBadge, FolderKanban, ChevronDown, Plus, Eye, FileText, ArrowLeftRight, ClipboardList } from "lucide-react";
+import { Shield, LayoutDashboard, RefreshCw, BarChart3, LogOut, Building2, FileBadge, FolderKanban, ChevronDown, Plus, Eye, FileText, ArrowLeftRight, ClipboardList, Users, UserPlus, UserCog, ShieldPlus, ShieldCheck } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -50,6 +50,16 @@ const menuWithSubs = [
     icon: FolderKanban,
     subItems: [
       { title: "My Request", url: "/workspace/my-request", icon: ClipboardList },
+    ],
+  },
+  {
+    title: "User Management",
+    icon: Users,
+    subItems: [
+      { title: "Create User", url: "/user-management/create", icon: UserPlus },
+      { title: "Manage User", url: "/user-management/manage", icon: UserCog },
+      { title: "Create Role", url: "/user-management/create-role", icon: ShieldPlus },
+      { title: "Manage Role", url: "/user-management/manage-role", icon: ShieldCheck },
     ],
   },
 ];
