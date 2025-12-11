@@ -32,6 +32,12 @@ const keyPairAlgorithms = [
   { value: "ECDSA_P384", label: "ECDSA P384" },
 ];
 
+// Sample CAs - replace with API call
+const availableCAs = [
+  { value: "root-ca", label: "My Root CA (root-ca)" },
+  { value: "intermediate-ca", label: "Intermediate CA (intermediate-ca)" },
+];
+
 const issueCertificateSchema = z.object({
   commonName: z.string().min(1, "Common name is required").max(100),
   organization: z.string().min(1, "Organization is required").max(100),
@@ -243,9 +249,20 @@ export default function IssueCertificate() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>CA Alias *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="root-ca" {...field} />
-                        </FormControl>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select CA" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {availableCAs.map((ca) => (
+                              <SelectItem key={ca.value} value={ca.value}>
+                                {ca.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
