@@ -11,6 +11,7 @@ import CAManagement from "./pages/CAManagement";
 import CreateCA from "./pages/CreateCA";
 import ViewCA from "./pages/ViewCA";
 import CertificateManagement from "./pages/CertificateManagement";
+import IssueCertificate from "./pages/IssueCertificate";
 import Workspace from "./pages/Workspace";
 import Certificates from "./pages/Certificates";
 import Renewals from "./pages/Renewals";
@@ -117,6 +118,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CertificateManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/certificate-management/issue"
+              element={
+                <ProtectedRoute>
+                  <IssueCertificate />
                 </ProtectedRoute>
               }
             />
