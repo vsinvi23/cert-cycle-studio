@@ -1,4 +1,4 @@
-import { Shield, LayoutDashboard, FileKey, RefreshCw, BarChart3, LogOut, ChevronLeft } from "lucide-react";
+import { Shield, LayoutDashboard, FileKey, RefreshCw, BarChart3, LogOut, Building2, FileBadge, FolderKanban } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -20,6 +20,9 @@ import { Separator } from "@/components/ui/separator";
 
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "CA Management", url: "/ca-management", icon: Building2 },
+  { title: "Certificate Management", url: "/certificate-management", icon: FileBadge },
+  { title: "My Workspace", url: "/workspace", icon: FolderKanban },
   { title: "Certificates", url: "/certificates", icon: FileKey },
   { title: "Renewals", url: "/renewals", icon: RefreshCw },
   { title: "Reports", url: "/reports", icon: BarChart3 },
