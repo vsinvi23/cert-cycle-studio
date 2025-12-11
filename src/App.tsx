@@ -7,6 +7,9 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import CAManagement from "./pages/CAManagement";
+import CertificateManagement from "./pages/CertificateManagement";
+import Workspace from "./pages/Workspace";
 import Certificates from "./pages/Certificates";
 import Renewals from "./pages/Renewals";
 import Reports from "./pages/Reports";
@@ -80,6 +83,30 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ca-management"
+              element={
+                <ProtectedRoute>
+                  <CAManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/certificate-management"
+              element={
+                <ProtectedRoute>
+                  <CertificateManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/workspace"
+              element={
+                <ProtectedRoute>
+                  <Workspace />
                 </ProtectedRoute>
               }
             />
