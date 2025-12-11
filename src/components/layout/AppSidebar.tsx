@@ -1,4 +1,4 @@
-import { Shield, LayoutDashboard, FileKey, RefreshCw, BarChart3, LogOut, Building2, FileBadge, FolderKanban, ChevronDown, Plus, Eye, FileText, ArrowLeftRight, ClipboardList } from "lucide-react";
+import { Shield, LayoutDashboard, FileKey, RefreshCw, BarChart3, LogOut, Building2, FileBadge, FolderKanban, ChevronDown, Plus, Eye, FileText, ArrowLeftRight, ClipboardList, PanelLeftClose, PanelLeft } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const simpleNavItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -62,7 +63,7 @@ const bottomNavItems = [
 export function AppSidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { state } = useSidebar();
+  const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [openMenus, setOpenMenus] = useState<string[]>([]);
 
@@ -80,16 +81,37 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
-            <Shield className="h-6 w-6 text-sidebar-primary-foreground" />
-          </div>
-          {!isCollapsed && (
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold text-sidebar-foreground">CertManager</span>
-              <span className="text-xs text-sidebar-foreground/70">Certificate Lifecycle</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
+              <Shield className="h-6 w-6 text-sidebar-primary-foreground" />
             </div>
-          )}
+            {!isCollapsed && (
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-sidebar-foreground">CertManager</span>
+                <span className="text-xs text-sidebar-foreground/70">Certificate Lifecycle</span>
+              </div>
+            )}
+          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleSidebar}
+                className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent"
+              >
+                {isCollapsed ? (
+                  <PanelLeft className="h-4 w-4" />
+                ) : (
+                  <PanelLeftClose className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            </TooltipContent>
+          </Tooltip>
         </div>
       </SidebarHeader>
 
