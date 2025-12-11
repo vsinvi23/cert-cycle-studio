@@ -1,7 +1,8 @@
-import { Shield, LayoutDashboard, FileKey, RefreshCw, BarChart3, LogOut, Building2, FileBadge, FolderKanban } from "lucide-react";
+import { Shield, LayoutDashboard, FileKey, RefreshCw, BarChart3, LogOut, Building2, FileBadge, FolderKanban, ChevronDown, Plus, Eye, FileText, ArrowLeftRight, ClipboardList } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,17 +13,47 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 
-const navItems = [
+const simpleNavItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "CA Management", url: "/ca-management", icon: Building2 },
-  { title: "Certificate Management", url: "/certificate-management", icon: FileBadge },
-  { title: "My Workspace", url: "/workspace", icon: FolderKanban },
+];
+
+const menuWithSubs = [
+  {
+    title: "CA Management",
+    icon: Building2,
+    subItems: [
+      { title: "Create CA", url: "/ca-management/create", icon: Plus },
+      { title: "View CA", url: "/ca-management/view", icon: Eye },
+    ],
+  },
+  {
+    title: "Certificate Management",
+    icon: FileBadge,
+    subItems: [
+      { title: "Issue New Certificate", url: "/certificate-management/issue", icon: FileText },
+      { title: "Issue Mutual Certificate", url: "/certificate-management/mutual", icon: ArrowLeftRight },
+    ],
+  },
+  {
+    title: "My Workspace",
+    icon: FolderKanban,
+    subItems: [
+      { title: "My Request", url: "/workspace/my-request", icon: ClipboardList },
+    ],
+  },
+];
+
+const bottomNavItems = [
   { title: "Certificates", url: "/certificates", icon: FileKey },
   { title: "Renewals", url: "/renewals", icon: RefreshCw },
   { title: "Reports", url: "/reports", icon: BarChart3 },
@@ -33,10 +64,17 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const [openMenus, setOpenMenus] = useState<string[]>([]);
 
   const handleLogout = () => {
     logout();
     navigate("/login");
+  };
+
+  const toggleMenu = (title: string) => {
+    setOpenMenus((prev) =>
+      prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]
+    );
   };
 
   return (
@@ -61,7 +99,75 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
+              {/* Simple nav items */}
+              {simpleNavItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild tooltip={item.title}>
+                    <NavLink
+                      to={item.url}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                    >
+                      <item.icon className="h-5 w-5 shrink-0" />
+                      {!isCollapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+
+              {/* Menu items with sub-items */}
+              {menuWithSubs.map((menu) => (
+                <Collapsible
+                  key={menu.title}
+                  open={openMenus.includes(menu.title)}
+                  onOpenChange={() => toggleMenu(menu.title)}
+                >
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton
+                        tooltip={menu.title}
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground w-full"
+                      >
+                        <menu.icon className="h-5 w-5 shrink-0" />
+                        {!isCollapsed && (
+                          <>
+                            <span className="flex-1 text-left">{menu.title}</span>
+                            <ChevronDown
+                              className={cn(
+                                "h-4 w-4 shrink-0 transition-transform duration-200",
+                                openMenus.includes(menu.title) && "rotate-180"
+                              )}
+                            />
+                          </>
+                        )}
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    {!isCollapsed && (
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {menu.subItems.map((subItem) => (
+                            <SidebarMenuSubItem key={subItem.title}>
+                              <SidebarMenuSubButton asChild>
+                                <NavLink
+                                  to={subItem.url}
+                                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sm"
+                                  activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                                >
+                                  <subItem.icon className="h-4 w-4 shrink-0" />
+                                  <span>{subItem.title}</span>
+                                </NavLink>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    )}
+                  </SidebarMenuItem>
+                </Collapsible>
+              ))}
+
+              {/* Bottom nav items */}
+              {bottomNavItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={item.title}>
                     <NavLink
