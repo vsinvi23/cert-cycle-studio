@@ -1,4 +1,4 @@
-import { Shield, LayoutDashboard, FileKey, RefreshCw, BarChart3, LogOut, Building2, FileBadge, FolderKanban, ChevronDown, Plus, Eye, FileText, ArrowLeftRight, ClipboardList, PanelLeftClose, PanelLeft } from "lucide-react";
+import { Shield, LayoutDashboard, RefreshCw, BarChart3, LogOut, Building2, FileBadge, FolderKanban, ChevronDown, Plus, Eye, FileText, ArrowLeftRight, ClipboardList, PanelLeftClose, PanelLeft } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -56,7 +56,6 @@ const menuWithSubs = [
 ];
 
 const bottomNavItems = [
-  { title: "Certificates", url: "/certificates", icon: FileKey },
   { title: "Reports", url: "/reports", icon: BarChart3 },
 ];
 
