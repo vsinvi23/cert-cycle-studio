@@ -1,8 +1,8 @@
-import { Building2, Plus, Search } from "lucide-react";
+import { Building2, Search } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CreateCADialog } from "@/components/ca/CreateCADialog";
 
 export default function CAManagement() {
   return (
@@ -13,10 +13,7 @@ export default function CAManagement() {
             <h1 className="text-2xl font-bold text-foreground">CA Management</h1>
             <p className="text-muted-foreground">Manage Certificate Authorities</p>
           </div>
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            Add CA
-          </Button>
+          <CreateCADialog />
         </div>
 
         <div className="flex items-center gap-4">
@@ -40,10 +37,7 @@ export default function CAManagement() {
               <p className="text-sm text-muted-foreground mb-4">
                 Add your first Certificate Authority to get started
               </p>
-              <Button variant="outline" className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add CA
-              </Button>
+              <CreateCADialog />
             </div>
           </CardContent>
         </Card>
