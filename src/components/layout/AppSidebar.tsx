@@ -80,25 +80,25 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
-              <Shield className="h-6 w-6 text-sidebar-primary-foreground" />
-            </div>
-            {!isCollapsed && (
+        <div className={cn("flex items-center", isCollapsed ? "justify-center" : "justify-between")}>
+          {!isCollapsed && (
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
+                <Shield className="h-6 w-6 text-sidebar-primary-foreground" />
+              </div>
               <div className="flex flex-col">
                 <span className="text-sm font-semibold text-sidebar-foreground">CertManager</span>
                 <span className="text-xs text-sidebar-foreground/70">Certificate Lifecycle</span>
               </div>
-            )}
-          </div>
+            </div>
+          )}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={toggleSidebar}
-                className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent"
+                className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent shrink-0"
               >
                 {isCollapsed ? (
                   <PanelLeft className="h-4 w-4" />
