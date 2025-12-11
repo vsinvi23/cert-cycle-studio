@@ -8,6 +8,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import CAManagement from "./pages/CAManagement";
+import CreateCA from "./pages/CreateCA";
+import ViewCA from "./pages/ViewCA";
 import CertificateManagement from "./pages/CertificateManagement";
 import Workspace from "./pages/Workspace";
 import Certificates from "./pages/Certificates";
@@ -91,6 +93,22 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CAManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ca-management/create"
+              element={
+                <ProtectedRoute>
+                  <CreateCA />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ca-management/view"
+              element={
+                <ProtectedRoute>
+                  <ViewCA />
                 </ProtectedRoute>
               }
             />

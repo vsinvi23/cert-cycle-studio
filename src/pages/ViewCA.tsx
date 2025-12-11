@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function CAManagement() {
+export default function ViewCA() {
   const navigate = useNavigate();
 
   return (
@@ -13,8 +13,8 @@ export default function CAManagement() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">CA Management</h1>
-            <p className="text-muted-foreground">Manage Certificate Authorities</p>
+            <h1 className="text-2xl font-bold text-foreground">View Certificate Authorities</h1>
+            <p className="text-muted-foreground">Manage your existing CAs</p>
           </div>
           <Button className="gap-2" onClick={() => navigate("/ca-management/create")}>
             <Plus className="h-4 w-4" />
