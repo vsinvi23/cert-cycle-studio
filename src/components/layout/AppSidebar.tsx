@@ -43,6 +43,7 @@ const menuWithSubs = [
     subItems: [
       { title: "Issue New Certificate", url: "/certificate-management/issue", icon: FileText },
       { title: "Issue Mutual Certificate", url: "/certificate-management/mutual", icon: ArrowLeftRight },
+      { title: "Renewals", url: "/renewals", icon: RefreshCw },
     ],
   },
   {
@@ -56,7 +57,6 @@ const menuWithSubs = [
 
 const bottomNavItems = [
   { title: "Certificates", url: "/certificates", icon: FileKey },
-  { title: "Renewals", url: "/renewals", icon: RefreshCw },
   { title: "Reports", url: "/reports", icon: BarChart3 },
 ];
 
