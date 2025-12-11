@@ -17,6 +17,10 @@ import Workspace from "./pages/Workspace";
 import Certificates from "./pages/Certificates";
 import Renewals from "./pages/Renewals";
 import Reports from "./pages/Reports";
+import CreateUser from "./pages/CreateUser";
+import ManageUser from "./pages/ManageUser";
+import CreateRole from "./pages/CreateRole";
+import ManageRole from "./pages/ManageRole";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -167,6 +171,38 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Reports />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/user-management/create"
+              element={
+                <ProtectedRoute>
+                  <CreateUser />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/user-management/manage"
+              element={
+                <ProtectedRoute>
+                  <ManageUser />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/user-management/create-role"
+              element={
+                <ProtectedRoute>
+                  <CreateRole />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/user-management/manage-role"
+              element={
+                <ProtectedRoute>
+                  <ManageRole />
                 </ProtectedRoute>
               }
             />
