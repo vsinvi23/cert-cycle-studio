@@ -12,6 +12,7 @@ import CreateCA from "./pages/CreateCA";
 import ViewCA from "./pages/ViewCA";
 import CertificateManagement from "./pages/CertificateManagement";
 import IssueCertificate from "./pages/IssueCertificate";
+import IssueMutualCertificate from "./pages/IssueMutualCertificate";
 import Workspace from "./pages/Workspace";
 import Certificates from "./pages/Certificates";
 import Renewals from "./pages/Renewals";
@@ -126,6 +127,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <IssueCertificate />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/certificate-management/mutual"
+              element={
+                <ProtectedRoute>
+                  <IssueMutualCertificate />
                 </ProtectedRoute>
               }
             />
