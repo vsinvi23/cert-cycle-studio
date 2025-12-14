@@ -1,365 +1,251 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useForm, useFieldArray } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { Server, Monitor, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-
-const keyPairAlgorithms = [
-  { value: "RSA2048", label: "RSA 2048" },
-  { value: "RSA3072", label: "RSA 3072" },
-  { value: "RSA4096", label: "RSA 4096" },
-  { value: "ECDSA_P256", label: "ECDSA P256" },
-  { value: "ECDSA_P384", label: "ECDSA P384" },
-];
-
-// Sample CAs - replace with API call
-const availableCAs = [
-  { value: "root-ca", label: "My Root CA (root-ca)" },
-  { value: "intermediate-ca", label: "Intermediate CA (intermediate-ca)" },
-];
-
-const certificateSchema = z.object({
-  commonName: z.string().min(1, "Common name is required").max(100),
-  organization: z.string().min(1, "Organization is required").max(100),
-  organizationalUnit: z.string().max(100).optional(),
-  locality: z.string().max(100).optional(),
-  state: z.string().max(100).optional(),
-  country: z.string().min(2, "Country code is required").max(2, "Country must be 2 characters"),
-  keyPairAlgorithm: z.string().min(1, "Key pair algorithm is required"),
-  validityInDays: z.coerce.number().min(1, "Must be at least 1 day").max(36500, "Maximum 100 years"),
-  alias: z.string().min(1, "Alias is required").max(50).regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers, and hyphens"),
-  passwordProtection: z.string().min(1, "Password protection is required").max(100),
-  caAlias: z.string().min(1, "CA alias is required").max(50),
-});
-
-const mutualCertificateSchema = z.object({
-  server: certificateSchema,
-  clients: z.array(certificateSchema).min(1, "At least one client certificate is required"),
-});
-
-type MutualCertificateFormValues = z.infer<typeof mutualCertificateSchema>;
-
-const defaultCertificate = {
-  commonName: "",
-  organization: "",
-  organizationalUnit: "",
-  locality: "",
-  state: "",
-  country: "",
-  keyPairAlgorithm: "RSA2048",
-  validityInDays: 365,
-  alias: "",
-  passwordProtection: "",
-  caAlias: "",
-};
+import { ServerCertificateDialog, type ServerCertificate } from "@/components/certificates/ServerCertificateDialog";
+import { ClientCertificateDialog, type ClientCertificate } from "@/components/certificates/ClientCertificateDialog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 export default function IssueMutualCertificate() {
-  const navigate = useNavigate();
+  const [servers, setServers] = useState<ServerCertificate[]>([]);
+  const [clients, setClients] = useState<ClientCertificate[]>([]);
+  const [expandedServers, setExpandedServers] = useState<Set<string>>(new Set());
 
-  const form = useForm<MutualCertificateFormValues>({
-    resolver: zodResolver(mutualCertificateSchema),
-    defaultValues: {
-      server: { ...defaultCertificate },
-      clients: [{ ...defaultCertificate }],
-    },
-  });
-
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "clients",
-  });
-
-  const onSubmit = (data: MutualCertificateFormValues) => {
-    // TODO: Integrate with REST API
-    console.log("Issue Mutual Certificate:", data);
-    toast({
-      title: "Mutual Certificates Issued",
-      description: `Server and ${data.clients.length} client certificate(s) issued successfully.`,
-    });
-    navigate("/certificate-management");
+  const handleAddServer = (server: ServerCertificate) => {
+    setServers((prev) => [...prev, server]);
+    setExpandedServers((prev) => new Set([...prev, server.id]));
   };
 
-  const CertificateFields = ({ prefix, title }: { prefix: string; title: string }) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <FormField
-        control={form.control}
-        name={`${prefix}.commonName` as any}
-        render={({ field }) => (
-          <FormItem className="md:col-span-2">
-            <FormLabel>Common Name *</FormLabel>
-            <FormControl>
-              <Input placeholder="www.example.com" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+  const handleAddClient = (client: ClientCertificate) => {
+    setClients((prev) => [...prev, client]);
+  };
 
-      <FormField
-        control={form.control}
-        name={`${prefix}.organization` as any}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Organization *</FormLabel>
-            <FormControl>
-              <Input placeholder="My Organization" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+  const handleDeleteServer = (serverId: string, serverName: string) => {
+    setServers((prev) => prev.filter((s) => s.id !== serverId));
+    setClients((prev) => prev.filter((c) => c.serverId !== serverId));
+    toast({
+      title: "Server Deleted",
+      description: `Server "${serverName}" and its clients have been removed.`,
+      variant: "destructive",
+    });
+  };
 
-      <FormField
-        control={form.control}
-        name={`${prefix}.organizationalUnit` as any}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Organizational Unit</FormLabel>
-            <FormControl>
-              <Input placeholder="IT Department" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+  const handleDeleteClient = (clientId: string, clientName: string) => {
+    setClients((prev) => prev.filter((c) => c.id !== clientId));
+    toast({
+      title: "Client Deleted",
+      description: `Client "${clientName}" has been removed.`,
+      variant: "destructive",
+    });
+  };
 
-      <FormField
-        control={form.control}
-        name={`${prefix}.locality` as any}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Locality</FormLabel>
-            <FormControl>
-              <Input placeholder="San Francisco" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+  const toggleServer = (serverId: string) => {
+    setExpandedServers((prev) => {
+      const next = new Set(prev);
+      if (next.has(serverId)) {
+        next.delete(serverId);
+      } else {
+        next.add(serverId);
+      }
+      return next;
+    });
+  };
 
-      <FormField
-        control={form.control}
-        name={`${prefix}.state` as any}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>State</FormLabel>
-            <FormControl>
-              <Input placeholder="California" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+  const getClientsForServer = (serverId: string) => {
+    return clients.filter((c) => c.serverId === serverId);
+  };
 
-      <FormField
-        control={form.control}
-        name={`${prefix}.country` as any}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Country Code *</FormLabel>
-            <FormControl>
-              <Input placeholder="US" maxLength={2} {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+  const handleIssueCertificates = () => {
+    if (servers.length === 0) {
+      toast({
+        title: "No Servers",
+        description: "Please add at least one server certificate.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-      <FormField
-        control={form.control}
-        name={`${prefix}.keyPairAlgorithm` as any}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Key Pair Algorithm *</FormLabel>
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select algorithm" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {keyPairAlgorithms.map((algo) => (
-                  <SelectItem key={algo.value} value={algo.value}>
-                    {algo.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={form.control}
-        name={`${prefix}.validityInDays` as any}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Validity (Days) *</FormLabel>
-            <FormControl>
-              <Input type="number" placeholder="365" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={form.control}
-        name={`${prefix}.alias` as any}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Alias *</FormLabel>
-            <FormControl>
-              <Input placeholder="my-certificate" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={form.control}
-        name={`${prefix}.caAlias` as any}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>CA Alias *</FormLabel>
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select CA" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {availableCAs.map((ca) => (
-                  <SelectItem key={ca.value} value={ca.value}>
-                    {ca.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={form.control}
-        name={`${prefix}.passwordProtection` as any}
-        render={({ field }) => (
-          <FormItem className="md:col-span-2">
-            <FormLabel>Password Protection *</FormLabel>
-            <FormControl>
-              <Input type="password" placeholder="Enter password" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-    </div>
-  );
+    // TODO: Integrate with REST API
+    console.log("Issue Mutual Certificates:", { servers, clients });
+    toast({
+      title: "Certificates Issued",
+      description: `${servers.length} server(s) and ${clients.length} client(s) issued successfully.`,
+    });
+    setServers([]);
+    setClients([]);
+    setExpandedServers(new Set());
+  };
 
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Issue Mutual Certificate</h1>
             <p className="text-muted-foreground">Create server and client certificates for mutual TLS</p>
           </div>
+          <ServerCertificateDialog onSuccess={handleAddServer} />
         </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Server Certificate */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Server Certificate</CardTitle>
-                <CardDescription>Enter the details for the server certificate</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <CertificateFields prefix="server" title="Server" />
-              </CardContent>
-            </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Server & Client Pairs</CardTitle>
+            <CardDescription>
+              Add servers and their associated client certificates
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {servers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Server className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <p className="text-muted-foreground">No server certificates added yet.</p>
+                <p className="text-sm text-muted-foreground">Click "Add Server" to get started.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {servers.map((server) => {
+                  const serverClients = getClientsForServer(server.id);
+                  const isExpanded = expandedServers.has(server.id);
 
-            {/* Client Certificates */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Client Certificates</CardTitle>
-                    <CardDescription>Add one or more client certificates</CardDescription>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => append({ ...defaultCertificate })}
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add Client
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {fields.map((field, index) => (
-                  <div key={field.id}>
-                    {index > 0 && <Separator className="mb-6" />}
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-sm font-medium text-foreground">Client {index + 1}</h4>
-                      {fields.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => remove(index)}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Remove
-                        </Button>
-                      )}
-                    </div>
-                    <CertificateFields prefix={`clients.${index}`} title={`Client ${index + 1}`} />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+                  return (
+                    <Collapsible key={server.id} open={isExpanded}>
+                      <div className="border rounded-lg overflow-hidden">
+                        {/* Server Row */}
+                        <div className="flex items-center justify-between p-4 bg-muted/30">
+                          <CollapsibleTrigger
+                            onClick={() => toggleServer(server.id)}
+                            className="flex items-center gap-3 flex-1 text-left"
+                          >
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            <Server className="h-5 w-5 text-primary" />
+                            <div>
+                              <p className="font-medium">{server.commonName}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {server.organization} • {server.alias}
+                              </p>
+                            </div>
+                          </CollapsibleTrigger>
+                          <div className="flex items-center gap-3">
+                            <Badge variant="secondary">{server.keyPairAlgorithm}</Badge>
+                            <Badge variant="outline">{serverClients.length} client(s)</Badge>
+                            <ClientCertificateDialog
+                              serverId={server.id}
+                              serverName={server.commonName}
+                              onSuccess={handleAddClient}
+                            />
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleDeleteServer(server.id, server.commonName)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Delete Server</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </div>
 
-            <div className="flex justify-end gap-3">
-              <Button type="button" variant="outline" onClick={() => navigate(-1)}>
-                Cancel
-              </Button>
-              <Button type="submit">Issue Certificates</Button>
-            </div>
-          </form>
-        </Form>
+                        {/* Clients Table */}
+                        <CollapsibleContent>
+                          {serverClients.length > 0 ? (
+                            <div className="border-t">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow className="bg-muted/10">
+                                    <TableHead className="pl-12">Client Name</TableHead>
+                                    <TableHead>Organization</TableHead>
+                                    <TableHead>Algorithm</TableHead>
+                                    <TableHead>Validity</TableHead>
+                                    <TableHead>Alias</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {serverClients.map((client) => (
+                                    <TableRow key={client.id}>
+                                      <TableCell className="pl-12">
+                                        <div className="flex items-center gap-2">
+                                          <Monitor className="h-4 w-4 text-muted-foreground" />
+                                          {client.commonName}
+                                        </div>
+                                      </TableCell>
+                                      <TableCell>{client.organization}</TableCell>
+                                      <TableCell>
+                                        <Badge variant="outline">{client.keyPairAlgorithm}</Badge>
+                                      </TableCell>
+                                      <TableCell>{client.validityInDays} days</TableCell>
+                                      <TableCell className="font-mono text-sm">{client.alias}</TableCell>
+                                      <TableCell className="text-right">
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                              onClick={() => handleDeleteClient(client.id, client.commonName)}
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Delete Client</TooltipContent>
+                                        </Tooltip>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          ) : (
+                            <div className="p-6 text-center text-muted-foreground border-t">
+                              <Monitor className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p className="text-sm">No clients added to this server yet.</p>
+                            </div>
+                          )}
+                        </CollapsibleContent>
+                      </div>
+                    </Collapsible>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {servers.length > 0 && (
+          <div className="flex justify-end">
+            <Button onClick={handleIssueCertificates} size="lg">
+              Issue All Certificates
+            </Button>
+          </div>
+        )}
       </div>
     </AppLayout>
   );
