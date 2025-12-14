@@ -1,7 +1,5 @@
-import { Plus, Search, Trash2, Ban } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Search, Trash2, Ban } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -17,7 +15,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import { CreateCADialog } from "@/components/ca/CreateCADialog";
 
 // Sample data - replace with API call
 const sampleCAs = [
@@ -48,8 +48,6 @@ const sampleCAs = [
 ];
 
 export default function ViewCA() {
-  const navigate = useNavigate();
-
   const handleDelete = (alias: string, commonName: string) => {
     // TODO: Integrate with REST API
     console.log("Delete CA:", alias);
@@ -77,10 +75,7 @@ export default function ViewCA() {
             <h1 className="text-2xl font-bold text-foreground">View Certificate Authorities</h1>
             <p className="text-muted-foreground">Manage your existing CAs</p>
           </div>
-          <Button className="gap-2" onClick={() => navigate("/ca-management/create")}>
-            <Plus className="h-4 w-4" />
-            Add CA
-          </Button>
+          <CreateCADialog />
         </div>
 
         <div className="flex items-center gap-4">
