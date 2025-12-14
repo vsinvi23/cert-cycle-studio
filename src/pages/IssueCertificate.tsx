@@ -1,296 +1,174 @@
-import { useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { ArrowLeft } from "lucide-react";
+import { useState } from "react";
+import { FileText, Trash2, Search, FileCheck, FileX } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
+import { IssueCertificateDialog, type CertificateRequest } from "@/components/certificates/IssueCertificateDialog";
+import { format } from "date-fns";
 
-const keyPairAlgorithms = [
-  { value: "RSA2048", label: "RSA 2048" },
-  { value: "RSA3072", label: "RSA 3072" },
-  { value: "RSA4096", label: "RSA 4096" },
-  { value: "ECDSA_P256", label: "ECDSA P256" },
-  { value: "ECDSA_P384", label: "ECDSA P384" },
-];
-
-// Sample CAs - replace with API call
-const availableCAs = [
-  { value: "root-ca", label: "My Root CA (root-ca)" },
-  { value: "intermediate-ca", label: "Intermediate CA (intermediate-ca)" },
-];
-
-const issueCertificateSchema = z.object({
-  commonName: z.string().min(1, "Common name is required").max(100),
-  organization: z.string().min(1, "Organization is required").max(100),
-  organizationalUnit: z.string().max(100).optional(),
-  locality: z.string().max(100).optional(),
-  state: z.string().max(100).optional(),
-  country: z.string().min(2, "Country code is required").max(2, "Country must be 2 characters"),
-  keyPairAlgorithm: z.string().min(1, "Key pair algorithm is required"),
-  validityInDays: z.coerce.number().min(1, "Must be at least 1 day").max(36500, "Maximum 100 years"),
-  alias: z.string().min(1, "Alias is required").max(50).regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers, and hyphens"),
-  passwordProtection: z.string().min(1, "Password protection is required").max(100),
-  caAlias: z.string().min(1, "CA alias is required").max(50),
-});
-
-type IssueCertificateFormValues = z.infer<typeof issueCertificateSchema>;
+const purposeLabels: Record<string, string> = {
+  "web-server": "Web Server",
+  "client-auth": "Client Auth",
+  "code-signing": "Code Signing",
+  "email": "Email",
+  "vpn": "VPN",
+  "iot": "IoT Device",
+  "api": "API Auth",
+  "other": "Other",
+};
 
 export default function IssueCertificate() {
-  const navigate = useNavigate();
+  const [requests, setRequests] = useState<CertificateRequest[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const form = useForm<IssueCertificateFormValues>({
-    resolver: zodResolver(issueCertificateSchema),
-    defaultValues: {
-      commonName: "",
-      organization: "",
-      organizationalUnit: "",
-      locality: "",
-      state: "",
-      country: "",
-      keyPairAlgorithm: "RSA2048",
-      validityInDays: 365,
-      alias: "",
-      passwordProtection: "",
-      caAlias: "",
-    },
-  });
+  const handleAddRequest = (request: CertificateRequest) => {
+    setRequests((prev) => [...prev, request]);
+  };
 
-  const onSubmit = (data: IssueCertificateFormValues) => {
-    // TODO: Integrate with REST API
-    console.log("Issue Certificate:", data);
+  const handleDeleteRequest = (requestId: string, commonName: string) => {
+    setRequests((prev) => prev.filter((r) => r.id !== requestId));
     toast({
-      title: "Certificate Issued",
-      description: `Certificate "${data.commonName}" issued successfully.`,
+      title: "Request Deleted",
+      description: `Certificate request for "${commonName}" has been removed.`,
+      variant: "destructive",
     });
-    navigate("/certificate-management");
+  };
+
+  const filteredRequests = requests.filter((request) =>
+    request.commonName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    request.alias.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    request.organization.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getStatusBadge = (status: CertificateRequest["status"]) => {
+    switch (status) {
+      case "pending":
+        return <Badge variant="secondary">Pending</Badge>;
+      case "approved":
+        return <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20">Approved</Badge>;
+      case "rejected":
+        return <Badge variant="destructive">Rejected</Badge>;
+    }
   };
 
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Issue New Certificate</h1>
-            <p className="text-muted-foreground">Create a new certificate for your organization</p>
+            <h1 className="text-2xl font-bold text-foreground">Issue Certificate</h1>
+            <p className="text-muted-foreground">Manage certificate requests</p>
+          </div>
+          <IssueCertificateDialog onSuccess={handleAddRequest} />
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search requests..."
+              className="pl-9"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Certificate Details</CardTitle>
-            <CardDescription>Enter the details for your new certificate</CardDescription>
+            <CardTitle>Certificate Requests</CardTitle>
+            <CardDescription>View and manage your certificate requests</CardDescription>
           </CardHeader>
           <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="commonName"
-                    render={({ field }) => (
-                      <FormItem className="md:col-span-2">
-                        <FormLabel>Common Name *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="www.example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="organization"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Organization *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="My Organization" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="organizationalUnit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Organizational Unit</FormLabel>
-                        <FormControl>
-                          <Input placeholder="IT Department" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="locality"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Locality</FormLabel>
-                        <FormControl>
-                          <Input placeholder="San Francisco" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="state"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>State</FormLabel>
-                        <FormControl>
-                          <Input placeholder="California" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="country"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Country Code *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="US" maxLength={2} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="keyPairAlgorithm"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Key Pair Algorithm *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select algorithm" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {keyPairAlgorithms.map((algo) => (
-                              <SelectItem key={algo.value} value={algo.value}>
-                                {algo.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="validityInDays"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Validity (Days) *</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="365" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="alias"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Alias *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="my-certificate" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="caAlias"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>CA Alias *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select CA" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {availableCAs.map((ca) => (
-                              <SelectItem key={ca.value} value={ca.value}>
-                                {ca.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="passwordProtection"
-                    render={({ field }) => (
-                      <FormItem className="md:col-span-2">
-                        <FormLabel>Password Protection *</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="Enter password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="flex justify-end gap-3 pt-4">
-                  <Button type="button" variant="outline" onClick={() => navigate(-1)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit">Issue Certificate</Button>
-                </div>
-              </form>
-            </Form>
+            {requests.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <p className="text-muted-foreground">No certificate requests yet.</p>
+                <p className="text-sm text-muted-foreground">Click "Raise Request" to submit a new request.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Common Name</TableHead>
+                      <TableHead>Organization</TableHead>
+                      <TableHead>Purpose</TableHead>
+                      <TableHead>CSR Type</TableHead>
+                      <TableHead>Algorithm</TableHead>
+                      <TableHead>Validity</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRequests.map((request) => (
+                      <TableRow key={request.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {request.csrType === "with-csr" ? (
+                              <FileCheck className="h-4 w-4 text-primary" />
+                            ) : (
+                              <FileX className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            {request.commonName}
+                          </div>
+                        </TableCell>
+                        <TableCell>{request.organization}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {purposeLabels[request.purpose] || request.purpose}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={request.csrType === "with-csr" ? "default" : "secondary"}>
+                            {request.csrType === "with-csr" ? "With CSR" : "Without CSR"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{request.keyPairAlgorithm}</TableCell>
+                        <TableCell>{request.validityInDays} days</TableCell>
+                        <TableCell>{getStatusBadge(request.status)}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {format(request.createdAt, "MMM d, yyyy")}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => handleDeleteRequest(request.id, request.commonName)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Delete Request</TooltipContent>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
