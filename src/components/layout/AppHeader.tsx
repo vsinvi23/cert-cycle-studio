@@ -1,11 +1,32 @@
-import { Search, Bell, Settings } from "lucide-react";
+import { useState } from "react";
+import { Search, Bell, Settings, SlidersHorizontal, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 export function AppHeader() {
   const { user } = useAuth();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    type: "all",
+    status: "all",
+    dateRange: "all",
+  });
   
   const initials = user?.name
     ?.split(" ")
@@ -13,19 +34,131 @@ export function AppHeader() {
     .join("")
     .toUpperCase() || "U";
 
+  const hasActiveFilters = filters.type !== "all" || filters.status !== "all" || filters.dateRange !== "all";
+
+  const clearFilters = () => {
+    setFilters({ type: "all", status: "all", dateRange: "all" });
+    setSearchQuery("");
+  };
+
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b bg-card px-6">
-      <div className="flex-1 max-w-xl">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search certificates, CAs, requests..."
-            className="pl-10 bg-secondary border-0 focus-visible:ring-1 focus-visible:ring-primary"
-          />
+    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-card px-6">
+      {/* Left spacer for balance */}
+      <div className="flex-1" />
+      
+      {/* Centered search with advanced filters */}
+      <div className="flex-1 max-w-2xl">
+        <div className="relative flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search certificates, CAs, requests..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-10 bg-secondary border-0 focus-visible:ring-1 focus-visible:ring-primary"
+            />
+            {(searchQuery || hasActiveFilters) && (
+              <button
+                onClick={clearFilters}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          
+          <Popover open={advancedOpen} onOpenChange={setAdvancedOpen}>
+            <PopoverTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className={hasActiveFilters ? "border-primary text-primary" : ""}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 bg-popover" align="end">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium">Advanced Search</h4>
+                  {hasActiveFilters && (
+                    <Button variant="ghost" size="sm" onClick={clearFilters}>
+                      Clear all
+                    </Button>
+                  )}
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="type">Type</Label>
+                    <Select
+                      value={filters.type}
+                      onValueChange={(value) => setFilters({ ...filters, type: value })}
+                    >
+                      <SelectTrigger id="type">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="certificate">Certificates</SelectItem>
+                        <SelectItem value="ca">Certificate Authorities</SelectItem>
+                        <SelectItem value="renewal">Renewals</SelectItem>
+                        <SelectItem value="mutual">Mutual Certificates</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <Label htmlFor="status">Status</Label>
+                    <Select
+                      value={filters.status}
+                      onValueChange={(value) => setFilters({ ...filters, status: value })}
+                    >
+                      <SelectTrigger id="status">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="valid">Valid</SelectItem>
+                        <SelectItem value="expiring">Expiring Soon</SelectItem>
+                        <SelectItem value="expired">Expired</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="revoked">Revoked</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <Label htmlFor="dateRange">Date Range</Label>
+                    <Select
+                      value={filters.dateRange}
+                      onValueChange={(value) => setFilters({ ...filters, dateRange: value })}
+                    >
+                      <SelectTrigger id="dateRange">
+                        <SelectValue placeholder="Select range" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Time</SelectItem>
+                        <SelectItem value="7days">Last 7 Days</SelectItem>
+                        <SelectItem value="30days">Last 30 Days</SelectItem>
+                        <SelectItem value="90days">Last 90 Days</SelectItem>
+                        <SelectItem value="year">Last Year</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <Button className="w-full" onClick={() => setAdvancedOpen(false)}>
+                  Apply Filters
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
       
-      <div className="flex items-center gap-2">
+      {/* Right side controls */}
+      <div className="flex-1 flex items-center justify-end gap-2">
         <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
           <Bell className="h-5 w-5" />
         </Button>
