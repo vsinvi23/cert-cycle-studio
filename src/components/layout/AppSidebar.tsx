@@ -63,7 +63,7 @@ export function AppSidebar() {
         isCollapsed ? "w-16 min-w-16" : "w-60 min-w-60"
       )}
     >
-      <SidebarHeader className="flex items-center justify-between px-3 py-4">
+      <SidebarHeader className="flex items-center justify-between px-3 py-4 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sidebar-primary shrink-0">
             <Shield className="h-5 w-5 text-sidebar-primary-foreground" />
