@@ -12,7 +12,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Radar, Shield, AlertTriangle, CheckCircle, XCircle, Loader2, Globe, Eye, FilePlus } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Search, Radar, Shield, AlertTriangle, CheckCircle, XCircle, Loader2, Globe, Eye, FilePlus, Filter } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { CertificateDetailsDialog } from "@/components/network-scan/CertificateDetailsDialog";
 import { RequestCertificateDialog } from "@/components/network-scan/RequestCertificateDialog";
@@ -99,6 +106,8 @@ export default function NetworkScan() {
   const [isScanning, setIsScanning] = useState(false);
   const [discoveredCerts, setDiscoveredCerts] = useState<DiscoveredCertificate[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [protocolFilter, setProtocolFilter] = useState<string>("all");
   const [selectedCert, setSelectedCert] = useState<DiscoveredCertificate | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
@@ -166,12 +175,17 @@ export default function NetworkScan() {
     return "text-green-600 dark:text-green-400";
   };
 
-  const filteredCerts = discoveredCerts.filter(
-    (cert) =>
+  const filteredCerts = discoveredCerts.filter((cert) => {
+    const matchesSearch =
       cert.endpoint.toLowerCase().includes(searchQuery.toLowerCase()) ||
       cert.commonName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cert.issuer.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      cert.issuer.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "all" || cert.status === statusFilter;
+    const matchesProtocol = protocolFilter === "all" || cert.protocol === protocolFilter;
+    return matchesSearch && matchesStatus && matchesProtocol;
+  });
+
+  const uniqueProtocols = [...new Set(discoveredCerts.map((c) => c.protocol))];
 
   const validCount = discoveredCerts.filter((c) => c.status === "valid").length;
   const expiringCount = discoveredCerts.filter((c) => c.status === "expiring").length;
@@ -276,19 +290,49 @@ export default function NetworkScan() {
         {discoveredCerts.length > 0 && (
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-4">
                 <CardTitle className="flex items-center gap-2">
                   <Shield className="h-5 w-5 text-primary" />
                   Discovered Certificates
                 </CardTitle>
-                <div className="relative w-64">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search certificates..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="valid">Valid</SelectItem>
+                        <SelectItem value="expiring">Expiring</SelectItem>
+                        <SelectItem value="expired">Expired</SelectItem>
+                        <SelectItem value="invalid">Invalid</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={protocolFilter} onValueChange={setProtocolFilter}>
+                      <SelectTrigger className="w-[130px]">
+                        <SelectValue placeholder="Protocol" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Protocols</SelectItem>
+                        {uniqueProtocols.map((protocol) => (
+                          <SelectItem key={protocol} value={protocol}>
+                            {protocol}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="relative w-64">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Search certificates..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
                 </div>
               </div>
             </CardHeader>
