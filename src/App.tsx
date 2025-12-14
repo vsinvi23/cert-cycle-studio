@@ -143,6 +143,14 @@ const App = () => (
               }
             />
             <Route
+              path="/workspace/my-request"
+              element={
+                <ProtectedRoute>
+                  <Workspace />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/certificates"
               element={
                 <ProtectedRoute>
