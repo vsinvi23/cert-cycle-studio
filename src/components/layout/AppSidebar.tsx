@@ -1,4 +1,4 @@
-import { Shield, LayoutDashboard, RefreshCw, BarChart3, LogOut, FileBadge, FolderKanban, Eye, ArrowLeftRight, Users, ShieldCheck } from "lucide-react";
+import { Shield, LayoutDashboard, RefreshCw, BarChart3, LogOut, FileBadge, FolderKanban, Eye, ArrowLeftRight, Users, ShieldCheck, Radar } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -26,6 +26,7 @@ const navItems = [
   { title: "Issue Certificate", url: "/certificate-management/issue", icon: FileBadge },
   { title: "Mutual Certificate", url: "/certificate-management/mutual", icon: ArrowLeftRight },
   { title: "Renewals", url: "/renewals", icon: RefreshCw },
+  { title: "Network Scan", url: "/network-scan", icon: Radar },
   { title: "My Requests", url: "/workspace/my-request", icon: FolderKanban },
   { title: "Users", url: "/user-management/manage", icon: Users },
   { title: "Roles", url: "/user-management/manage-role", icon: ShieldCheck },

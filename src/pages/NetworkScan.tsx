@@ -1,0 +1,366 @@
+import { useState } from "react";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Search, Radar, Shield, AlertTriangle, CheckCircle, XCircle, Loader2, Globe } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+
+interface DiscoveredCertificate {
+  id: string;
+  endpoint: string;
+  port: number;
+  commonName: string;
+  issuer: string;
+  validFrom: string;
+  validTo: string;
+  daysToExpiry: number;
+  protocol: string;
+  status: "valid" | "expiring" | "expired" | "invalid";
+}
+
+// Sample discovered certificates data
+const sampleDiscoveredCerts: DiscoveredCertificate[] = [
+  {
+    id: "1",
+    endpoint: "192.168.1.10",
+    port: 443,
+    commonName: "api.company.com",
+    issuer: "DigiCert Global Root CA",
+    validFrom: "2024-01-15",
+    validTo: "2025-01-15",
+    daysToExpiry: 180,
+    protocol: "TLS 1.3",
+    status: "valid",
+  },
+  {
+    id: "2",
+    endpoint: "192.168.1.25",
+    port: 443,
+    commonName: "mail.company.com",
+    issuer: "Let's Encrypt Authority X3",
+    validFrom: "2024-06-01",
+    validTo: "2024-12-30",
+    daysToExpiry: 15,
+    protocol: "TLS 1.2",
+    status: "expiring",
+  },
+  {
+    id: "3",
+    endpoint: "192.168.1.50",
+    port: 8443,
+    commonName: "internal.company.local",
+    issuer: "Company Internal CA",
+    validFrom: "2023-01-01",
+    validTo: "2024-01-01",
+    daysToExpiry: -350,
+    protocol: "TLS 1.2",
+    status: "expired",
+  },
+  {
+    id: "4",
+    endpoint: "192.168.1.100",
+    port: 443,
+    commonName: "portal.company.com",
+    issuer: "GlobalSign Root CA",
+    validFrom: "2024-03-20",
+    validTo: "2025-03-20",
+    daysToExpiry: 245,
+    protocol: "TLS 1.3",
+    status: "valid",
+  },
+  {
+    id: "5",
+    endpoint: "192.168.1.75",
+    port: 443,
+    commonName: "*.company.com",
+    issuer: "Sectigo RSA Domain Validation",
+    validFrom: "2024-02-10",
+    validTo: "2025-02-10",
+    daysToExpiry: 210,
+    protocol: "TLS 1.2",
+    status: "valid",
+  },
+];
+
+export default function NetworkScan() {
+  const [networkRange, setNetworkRange] = useState("");
+  const [isScanning, setIsScanning] = useState(false);
+  const [discoveredCerts, setDiscoveredCerts] = useState<DiscoveredCertificate[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleScan = () => {
+    if (!networkRange.trim()) {
+      toast({
+        title: "Network Range Required",
+        description: "Please enter a network range or IP address to scan.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsScanning(true);
+    setDiscoveredCerts([]);
+
+    // Simulate network scanning
+    setTimeout(() => {
+      setDiscoveredCerts(sampleDiscoveredCerts);
+      setIsScanning(false);
+      toast({
+        title: "Scan Complete",
+        description: `Discovered ${sampleDiscoveredCerts.length} certificate endpoints.`,
+      });
+    }, 3000);
+  };
+
+  const getStatusBadge = (status: DiscoveredCertificate["status"]) => {
+    switch (status) {
+      case "valid":
+        return (
+          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+            <CheckCircle className="mr-1 h-3 w-3" />
+            Valid
+          </Badge>
+        );
+      case "expiring":
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">
+            <AlertTriangle className="mr-1 h-3 w-3" />
+            Expiring Soon
+          </Badge>
+        );
+      case "expired":
+        return (
+          <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100">
+            <XCircle className="mr-1 h-3 w-3" />
+            Expired
+          </Badge>
+        );
+      case "invalid":
+        return (
+          <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100">
+            <XCircle className="mr-1 h-3 w-3" />
+            Invalid
+          </Badge>
+        );
+    }
+  };
+
+  const getExpiryColor = (days: number) => {
+    if (days < 0) return "text-red-600 dark:text-red-400";
+    if (days <= 30) return "text-yellow-600 dark:text-yellow-400";
+    return "text-green-600 dark:text-green-400";
+  };
+
+  const filteredCerts = discoveredCerts.filter(
+    (cert) =>
+      cert.endpoint.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      cert.commonName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      cert.issuer.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const validCount = discoveredCerts.filter((c) => c.status === "valid").length;
+  const expiringCount = discoveredCerts.filter((c) => c.status === "expiring").length;
+  const expiredCount = discoveredCerts.filter((c) => c.status === "expired").length;
+
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Network Certificate Scanner</h1>
+          <p className="text-muted-foreground">
+            Discover and analyze SSL/TLS certificates across your network
+          </p>
+        </div>
+
+        {/* Scan Input */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Radar className="h-5 w-5 text-primary" />
+              Network Scan
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Input
+                  placeholder="Enter network range (e.g., 192.168.1.0/24) or IP address"
+                  value={networkRange}
+                  onChange={(e) => setNetworkRange(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <Button onClick={handleScan} disabled={isScanning}>
+                {isScanning ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Scanning...
+                  </>
+                ) : (
+                  <>
+                    <Radar className="mr-2 h-4 w-4" />
+                    Start Scan
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Stats Cards */}
+        {discoveredCerts.length > 0 && (
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardContent className="flex items-center gap-4 p-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                  <Globe className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Discovered</p>
+                  <p className="text-2xl font-bold">{discoveredCerts.length}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="flex items-center gap-4 p-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900">
+                  <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Valid</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{validCount}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="flex items-center gap-4 p-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-yellow-100 dark:bg-yellow-900">
+                  <AlertTriangle className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Expiring Soon</p>
+                  <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{expiringCount}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="flex items-center gap-4 p-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900">
+                  <XCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Expired</p>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">{expiredCount}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Results Table */}
+        {discoveredCerts.length > 0 && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-primary" />
+                  Discovered Certificates
+                </CardTitle>
+                <div className="relative w-64">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search certificates..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Endpoint</TableHead>
+                    <TableHead>Common Name</TableHead>
+                    <TableHead>Issuer</TableHead>
+                    <TableHead>Protocol</TableHead>
+                    <TableHead>Valid From</TableHead>
+                    <TableHead>Valid To</TableHead>
+                    <TableHead>Days to Expiry</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCerts.map((cert) => (
+                    <TableRow key={cert.id}>
+                      <TableCell className="font-medium">
+                        {cert.endpoint}:{cert.port}
+                      </TableCell>
+                      <TableCell>{cert.commonName}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">{cert.issuer}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{cert.protocol}</Badge>
+                      </TableCell>
+                      <TableCell>{cert.validFrom}</TableCell>
+                      <TableCell>{cert.validTo}</TableCell>
+                      <TableCell>
+                        <span className={getExpiryColor(cert.daysToExpiry)}>
+                          {cert.daysToExpiry < 0
+                            ? `${Math.abs(cert.daysToExpiry)} days ago`
+                            : `${cert.daysToExpiry} days`}
+                        </span>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(cert.status)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {filteredCerts.length === 0 && (
+                <div className="py-8 text-center text-muted-foreground">
+                  No certificates found matching your search.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Empty State */}
+        {!isScanning && discoveredCerts.length === 0 && (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Radar className="h-16 w-16 text-muted-foreground/50" />
+              <h3 className="mt-4 text-lg font-medium">No Scan Results</h3>
+              <p className="text-muted-foreground">
+                Enter a network range above and start scanning to discover certificate endpoints.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Scanning State */}
+        {isScanning && (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-16 w-16 animate-spin text-primary" />
+              <h3 className="mt-4 text-lg font-medium">Scanning Network...</h3>
+              <p className="text-muted-foreground">
+                Discovering SSL/TLS endpoints in {networkRange}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </AppLayout>
+  );
+}
