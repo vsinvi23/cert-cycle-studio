@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileText, Trash2, Search, FileCheck, FileX } from "lucide-react";
+import { FileText, Trash2, Search, FileCheck, FileX, Download } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +50,44 @@ export default function IssueCertificate() {
     });
   };
 
+  const handleIssueRequest = (requestId: string) => {
+    setRequests((prev) =>
+      prev.map((r) =>
+        r.id === requestId ? { ...r, status: "approved" as const } : r
+      )
+    );
+    toast({
+      title: "Certificate Issued",
+      description: "Certificate has been issued successfully.",
+    });
+  };
+
+  const handleDownload = (request: CertificateRequest) => {
+    // TODO: Integrate with REST API to download actual certificate
+    const certData = `-----BEGIN CERTIFICATE-----
+Certificate: ${request.commonName}
+Alias: ${request.alias}
+Organization: ${request.organization}
+Algorithm: ${request.keyPairAlgorithm}
+Validity: ${request.validityInDays} days
+-----END CERTIFICATE-----`;
+
+    const blob = new Blob([certData], { type: "application/x-pem-file" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${request.alias}.pem`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Download Started",
+      description: `Downloading certificate "${request.commonName}"`,
+    });
+  };
+
   const filteredRequests = requests.filter((request) =>
     request.commonName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     request.alias.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -61,7 +99,7 @@ export default function IssueCertificate() {
       case "pending":
         return <Badge variant="secondary">Pending</Badge>;
       case "approved":
-        return <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20">Approved</Badge>;
+        return <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20">Issued</Badge>;
       case "rejected":
         return <Badge variant="destructive">Rejected</Badge>;
     }
@@ -149,19 +187,51 @@ export default function IssueCertificate() {
                           {format(request.createdAt, "MMM d, yyyy")}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => handleDeleteRequest(request.id, request.commonName)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Delete Request</TooltipContent>
-                          </Tooltip>
+                          <div className="flex justify-end gap-1">
+                            {request.status === "pending" && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-500/10"
+                                    onClick={() => handleIssueRequest(request.id)}
+                                  >
+                                    <FileCheck className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Issue Certificate</TooltipContent>
+                              </Tooltip>
+                            )}
+                            {request.status === "approved" && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                                    onClick={() => handleDownload(request)}
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Download Certificate</TooltipContent>
+                              </Tooltip>
+                            )}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleDeleteRequest(request.id, request.commonName)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Delete Request</TooltipContent>
+                            </Tooltip>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
