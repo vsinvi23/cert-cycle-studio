@@ -12,8 +12,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Radar, Shield, AlertTriangle, CheckCircle, XCircle, Loader2, Globe } from "lucide-react";
+import { Search, Radar, Shield, AlertTriangle, CheckCircle, XCircle, Loader2, Globe, Eye, FilePlus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { CertificateDetailsDialog } from "@/components/network-scan/CertificateDetailsDialog";
+import { RequestCertificateDialog } from "@/components/network-scan/RequestCertificateDialog";
 
 interface DiscoveredCertificate {
   id: string;
@@ -97,6 +99,9 @@ export default function NetworkScan() {
   const [isScanning, setIsScanning] = useState(false);
   const [discoveredCerts, setDiscoveredCerts] = useState<DiscoveredCertificate[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCert, setSelectedCert] = useState<DiscoveredCertificate | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
 
   const handleScan = () => {
     if (!networkRange.trim()) {
@@ -299,6 +304,7 @@ export default function NetworkScan() {
                     <TableHead>Valid To</TableHead>
                     <TableHead>Days to Expiry</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -322,6 +328,32 @@ export default function NetworkScan() {
                         </span>
                       </TableCell>
                       <TableCell>{getStatusBadge(cert.status)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setSelectedCert(cert);
+                              setDetailsDialogOpen(true);
+                            }}
+                            title="View Details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setSelectedCert(cert);
+                              setRequestDialogOpen(true);
+                            }}
+                            title="Request Certificate"
+                          >
+                            <FilePlus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -360,6 +392,18 @@ export default function NetworkScan() {
             </CardContent>
           </Card>
         )}
+
+        {/* Dialogs */}
+        <CertificateDetailsDialog
+          open={detailsDialogOpen}
+          onOpenChange={setDetailsDialogOpen}
+          certificate={selectedCert}
+        />
+        <RequestCertificateDialog
+          open={requestDialogOpen}
+          onOpenChange={setRequestDialogOpen}
+          certificate={selectedCert}
+        />
       </div>
     </AppLayout>
   );
