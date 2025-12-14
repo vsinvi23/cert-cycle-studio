@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Server, Monitor, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { Server, Monitor, Trash2, ChevronDown, ChevronRight, Download, CheckCircle } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,21 +26,35 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
+type ServerWithStatus = ServerCertificate & { status: "pending" | "issued" };
+type ClientWithStatus = ClientCertificate & { status: "pending" | "issued" };
+
 export default function IssueMutualCertificate() {
-  const [servers, setServers] = useState<ServerCertificate[]>([]);
-  const [clients, setClients] = useState<ClientCertificate[]>([]);
+  const [servers, setServers] = useState<ServerWithStatus[]>([]);
+  const [clients, setClients] = useState<ClientWithStatus[]>([]);
   const [expandedServers, setExpandedServers] = useState<Set<string>>(new Set());
 
   const handleAddServer = (server: ServerCertificate) => {
-    setServers((prev) => [...prev, server]);
+    const serverWithStatus: ServerWithStatus = { ...server, status: "pending" };
+    setServers((prev) => [...prev, serverWithStatus]);
     setExpandedServers((prev) => new Set([...prev, server.id]));
   };
 
   const handleAddClient = (client: ClientCertificate) => {
-    setClients((prev) => [...prev, client]);
+    const clientWithStatus: ClientWithStatus = { ...client, status: "pending" };
+    setClients((prev) => [...prev, clientWithStatus]);
   };
 
   const handleDeleteServer = (serverId: string, serverName: string) => {
+    const server = servers.find((s) => s.id === serverId);
+    if (server?.status === "issued") {
+      toast({
+        title: "Cannot Delete",
+        description: "Issued certificates cannot be deleted.",
+        variant: "destructive",
+      });
+      return;
+    }
     setServers((prev) => prev.filter((s) => s.id !== serverId));
     setClients((prev) => prev.filter((c) => c.serverId !== serverId));
     toast({
@@ -51,6 +65,15 @@ export default function IssueMutualCertificate() {
   };
 
   const handleDeleteClient = (clientId: string, clientName: string) => {
+    const client = clients.find((c) => c.id === clientId);
+    if (client?.status === "issued") {
+      toast({
+        title: "Cannot Delete",
+        description: "Issued certificates cannot be deleted.",
+        variant: "destructive",
+      });
+      return;
+    }
     setClients((prev) => prev.filter((c) => c.id !== clientId));
     toast({
       title: "Client Deleted",
@@ -75,25 +98,100 @@ export default function IssueMutualCertificate() {
     return clients.filter((c) => c.serverId === serverId);
   };
 
+  const getPendingServers = () => servers.filter((s) => s.status === "pending");
+
   const handleIssueCertificates = () => {
-    if (servers.length === 0) {
+    const pendingServers = getPendingServers();
+    if (pendingServers.length === 0) {
       toast({
-        title: "No Servers",
-        description: "Please add at least one server certificate.",
+        title: "No Pending Certificates",
+        description: "Add server certificates to issue.",
         variant: "destructive",
       });
       return;
     }
 
+    const pendingServerIds = new Set(pendingServers.map((s) => s.id));
+
+    // Update servers to issued
+    setServers((prev) =>
+      prev.map((s) =>
+        pendingServerIds.has(s.id) ? { ...s, status: "issued" as const } : s
+      )
+    );
+
+    // Update clients of pending servers to issued
+    setClients((prev) =>
+      prev.map((c) =>
+        pendingServerIds.has(c.serverId) && c.status === "pending"
+          ? { ...c, status: "issued" as const }
+          : c
+      )
+    );
+
+    const pendingClientsCount = clients.filter(
+      (c) => pendingServerIds.has(c.serverId) && c.status === "pending"
+    ).length;
+
     // TODO: Integrate with REST API
-    console.log("Issue Mutual Certificates:", { servers, clients });
+    console.log("Issue Mutual Certificates:", { servers: pendingServers, clients });
     toast({
       title: "Certificates Issued",
-      description: `${servers.length} server(s) and ${clients.length} client(s) issued successfully.`,
+      description: `${pendingServers.length} server(s) and ${pendingClientsCount} client(s) issued successfully.`,
     });
-    setServers([]);
-    setClients([]);
-    setExpandedServers(new Set());
+  };
+
+  const handleDownloadServer = (server: ServerWithStatus) => {
+    const certData = `-----BEGIN CERTIFICATE-----
+Server Certificate: ${server.commonName}
+Alias: ${server.alias}
+Organization: ${server.organization}
+Algorithm: ${server.keyPairAlgorithm}
+Validity: ${server.validityInDays} days
+CA: ${server.caAlias}
+-----END CERTIFICATE-----`;
+
+    downloadFile(certData, `${server.alias}-server.pem`);
+    toast({
+      title: "Download Started",
+      description: `Downloading server certificate "${server.commonName}"`,
+    });
+  };
+
+  const handleDownloadClient = (client: ClientWithStatus) => {
+    const certData = `-----BEGIN CERTIFICATE-----
+Client Certificate: ${client.commonName}
+Alias: ${client.alias}
+Organization: ${client.organization}
+Algorithm: ${client.keyPairAlgorithm}
+Validity: ${client.validityInDays} days
+CA: ${client.caAlias}
+-----END CERTIFICATE-----`;
+
+    downloadFile(certData, `${client.alias}-client.pem`);
+    toast({
+      title: "Download Started",
+      description: `Downloading client certificate "${client.commonName}"`,
+    });
+  };
+
+  const downloadFile = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: "application/x-pem-file" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const getStatusBadge = (status: "pending" | "issued") => {
+    if (status === "issued") {
+      return <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20">Issued</Badge>;
+    }
+    return <Badge variant="secondary">Pending</Badge>;
   };
 
   return (
@@ -150,26 +248,46 @@ export default function IssueMutualCertificate() {
                             </div>
                           </CollapsibleTrigger>
                           <div className="flex items-center gap-3">
-                            <Badge variant="secondary">{server.keyPairAlgorithm}</Badge>
-                            <Badge variant="outline">{serverClients.length} client(s)</Badge>
-                            <ClientCertificateDialog
-                              serverId={server.id}
-                              serverName={server.commonName}
-                              onSuccess={handleAddClient}
-                            />
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                  onClick={() => handleDeleteServer(server.id, server.commonName)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Delete Server</TooltipContent>
-                            </Tooltip>
+                            {getStatusBadge(server.status)}
+                            <Badge variant="outline">{server.keyPairAlgorithm}</Badge>
+                            <Badge variant="secondary">{serverClients.length} client(s)</Badge>
+                            {server.status === "issued" && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                                    onClick={() => handleDownloadServer(server)}
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Download Server Certificate</TooltipContent>
+                              </Tooltip>
+                            )}
+                            {server.status === "pending" && (
+                              <ClientCertificateDialog
+                                serverId={server.id}
+                                serverName={server.commonName}
+                                onSuccess={handleAddClient}
+                              />
+                            )}
+                            {server.status === "pending" && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => handleDeleteServer(server.id, server.commonName)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Delete Server</TooltipContent>
+                              </Tooltip>
+                            )}
                           </div>
                         </div>
 
@@ -184,6 +302,7 @@ export default function IssueMutualCertificate() {
                                     <TableHead>Organization</TableHead>
                                     <TableHead>Algorithm</TableHead>
                                     <TableHead>Validity</TableHead>
+                                    <TableHead>Status</TableHead>
                                     <TableHead>Alias</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                   </TableRow>
@@ -202,21 +321,41 @@ export default function IssueMutualCertificate() {
                                         <Badge variant="outline">{client.keyPairAlgorithm}</Badge>
                                       </TableCell>
                                       <TableCell>{client.validityInDays} days</TableCell>
+                                      <TableCell>{getStatusBadge(client.status)}</TableCell>
                                       <TableCell className="font-mono text-sm">{client.alias}</TableCell>
                                       <TableCell className="text-right">
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                              onClick={() => handleDeleteClient(client.id, client.commonName)}
-                                            >
-                                              <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                          </TooltipTrigger>
-                                          <TooltipContent>Delete Client</TooltipContent>
-                                        </Tooltip>
+                                        <div className="flex justify-end gap-1">
+                                          {client.status === "issued" && (
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                                                  onClick={() => handleDownloadClient(client)}
+                                                >
+                                                  <Download className="h-4 w-4" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>Download Client Certificate</TooltipContent>
+                                            </Tooltip>
+                                          )}
+                                          {client.status === "pending" && (
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                  onClick={() => handleDeleteClient(client.id, client.commonName)}
+                                                >
+                                                  <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>Delete Client</TooltipContent>
+                                            </Tooltip>
+                                          )}
+                                        </div>
                                       </TableCell>
                                     </TableRow>
                                   ))}
@@ -239,10 +378,10 @@ export default function IssueMutualCertificate() {
           </CardContent>
         </Card>
 
-        {servers.length > 0 && (
+        {getPendingServers().length > 0 && (
           <div className="flex justify-end">
             <Button onClick={handleIssueCertificates} size="lg">
-              Issue All Certificates
+              Issue Pending Certificates
             </Button>
           </div>
         )}
