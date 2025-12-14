@@ -16,6 +16,7 @@ import IssueMutualCertificate from "./pages/IssueMutualCertificate";
 import Workspace from "./pages/Workspace";
 import Certificates from "./pages/Certificates";
 import Renewals from "./pages/Renewals";
+import NetworkScan from "./pages/NetworkScan";
 import Reports from "./pages/Reports";
 import CreateUser from "./pages/CreateUser";
 import ManageUser from "./pages/ManageUser";
@@ -163,6 +164,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Renewals />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/network-scan"
+              element={
+                <ProtectedRoute>
+                  <NetworkScan />
                 </ProtectedRoute>
               }
             />
