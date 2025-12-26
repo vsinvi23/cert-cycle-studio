@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { FileText, Search, Download, Clock } from "lucide-react";
+import { useEffect, useState } from "react";
+import { FileText, Search, Download, Clock, Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,95 +14,73 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-
-interface PendingRequest {
-  id: string;
-  certificateAlias: string;
-  commonName: string;
-  type: "certificate" | "renewal" | "mutual";
-  organization: string;
-  requestedAt: string;
-  status: "pending" | "approved" | "rejected";
-}
+import { certificatesApi } from "@/lib/api";
+import type { Certificate } from "@/lib/api/types";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Workspace() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [requests] = useState<PendingRequest[]>([
-    // Sample data - will be replaced with API data
-    {
-      id: "1",
-      certificateAlias: "web-server-prod",
-      commonName: "api.example.com",
-      type: "certificate",
-      organization: "Example Corp",
-      requestedAt: new Date().toISOString(),
-      status: "pending",
-    },
-    {
-      id: "2",
-      certificateAlias: "client-auth",
-      commonName: "client.example.com",
-      type: "mutual",
-      organization: "Example Corp",
-      requestedAt: new Date(Date.now() - 86400000).toISOString(),
-      status: "pending",
-    },
-    {
-      id: "3",
-      certificateAlias: "old-cert-renewal",
-      commonName: "legacy.example.com",
-      type: "renewal",
-      organization: "Example Corp",
-      requestedAt: new Date(Date.now() - 172800000).toISOString(),
-      status: "approved",
-    },
-  ]);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredRequests = requests.filter(
-    (r) =>
-      r.certificateAlias.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.commonName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.organization.toLowerCase().includes(searchQuery.toLowerCase())
+  useEffect(() => {
+    const fetchCertificates = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch all certificates (user-specific endpoint would use user ID)
+        const certs = await certificatesApi.getAll();
+        setCertificates(Array.isArray(certs) ? certs : []);
+      } catch (error) {
+        console.error("Failed to fetch certificates:", error);
+        toast.error("Failed to load certificate requests");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchCertificates();
+  }, [user]);
+
+  const filteredCertificates = certificates.filter(
+    (c) =>
+      c.host?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.issuerCA?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.algorithm?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const pendingCount = requests.filter((r) => r.status === "pending").length;
-  const approvedCount = requests.filter((r) => r.status === "approved").length;
-  const rejectedCount = requests.filter((r) => r.status === "rejected").length;
+  const pendingCount = certificates.filter((c) => c.status === "ACTIVE").length;
+  const approvedCount = certificates.filter((c) => c.status === "ACTIVE").length;
+  const expiredCount = certificates.filter((c) => c.status === "EXPIRED").length;
+  const revokedCount = certificates.filter((c) => c.status === "REVOKED").length;
 
-  const getStatusBadge = (status: PendingRequest["status"]) => {
-    const variants: Record<PendingRequest["status"], "default" | "secondary" | "destructive"> = {
-      pending: "secondary",
-      approved: "default",
-      rejected: "destructive",
-    };
-    return <Badge variant={variants[status]}>{status}</Badge>;
+  const getStatusBadge = (status: Certificate["status"]) => {
+    switch (status) {
+      case "ACTIVE":
+        return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">Active</Badge>;
+      case "EXPIRED":
+        return <Badge variant="secondary">Expired</Badge>;
+      case "REVOKED":
+        return <Badge variant="destructive">Revoked</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
   };
 
-  const getTypeBadge = (type: PendingRequest["type"]) => {
-    const labels: Record<PendingRequest["type"], string> = {
-      certificate: "Certificate",
-      renewal: "Renewal",
-      mutual: "Mutual TLS",
-    };
-    return (
-      <Badge variant="outline">{labels[type]}</Badge>
-    );
-  };
-
-  const handleDownload = (request: PendingRequest) => {
+  const handleDownload = (cert: Certificate) => {
     const certContent = `-----BEGIN CERTIFICATE-----
-Certificate Alias: ${request.certificateAlias}
-Common Name: ${request.commonName}
-Organization: ${request.organization}
-Type: ${request.type}
-Approved At: ${new Date().toISOString()}
+Certificate ID: ${cert.id}
+Host: ${cert.host}
+Issuer CA: ${cert.issuerCA}
+Algorithm: ${cert.algorithm}
+Valid From: ${cert.validFrom}
+Valid To: ${cert.validTo}
 -----END CERTIFICATE-----`;
 
     const blob = new Blob([certContent], { type: "application/x-pem-file" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${request.certificateAlias}.pem`;
+    a.download = `${cert.host?.replace(/\./g, "_") || `cert-${cert.id}`}.pem`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -110,39 +88,58 @@ Approved At: ${new Date().toISOString()}
     toast.success("Certificate downloaded");
   };
 
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex h-96 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2 text-muted-foreground">Loading requests...</span>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">My Requests</h1>
-            <p className="text-muted-foreground">View your certificate requests pending approval</p>
+            <p className="text-muted-foreground">View your certificates and their status</p>
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
+              <CardTitle className="text-sm font-medium">Total</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{pendingCount}</div>
+              <div className="text-2xl font-bold">{certificates.length}</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Approved</CardTitle>
+              <CardTitle className="text-sm font-medium">Active</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{approvedCount}</div>
+              <div className="text-2xl font-bold text-green-500">{approvedCount}</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Rejected</CardTitle>
+              <CardTitle className="text-sm font-medium">Expired</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{rejectedCount}</div>
+              <div className="text-2xl font-bold text-yellow-500">{expiredCount}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Revoked</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-destructive">{revokedCount}</div>
             </CardContent>
           </Card>
         </div>
@@ -151,15 +148,15 @@ Approved At: ${new Date().toISOString()}
           <CardHeader>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <CardTitle>Certificate Requests</CardTitle>
+                <CardTitle>My Certificates</CardTitle>
                 <CardDescription>
-                  All your certificate requests and their approval status
+                  All your certificates and their status
                 </CardDescription>
               </div>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search requests..."
+                  placeholder="Search certificates..."
                   className="pl-8"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -168,54 +165,58 @@ Approved At: ${new Date().toISOString()}
             </div>
           </CardHeader>
           <CardContent>
-            {filteredRequests.length === 0 ? (
+            {filteredCertificates.length === 0 ? (
               <div className="flex h-64 flex-col items-center justify-center text-center">
                 <Clock className="h-12 w-12 text-muted-foreground/50" />
-                <h3 className="mt-4 text-lg font-semibold">No requests found</h3>
+                <h3 className="mt-4 text-lg font-semibold">No certificates found</h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Your certificate requests will appear here.
+                  Your certificates will appear here.
                 </p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Certificate Alias</TableHead>
-                    <TableHead>Common Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Organization</TableHead>
-                    <TableHead>Requested</TableHead>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Host</TableHead>
+                    <TableHead>Issuer CA</TableHead>
+                    <TableHead>Algorithm</TableHead>
+                    <TableHead>Valid From</TableHead>
+                    <TableHead>Valid To</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRequests.map((request) => (
-                    <TableRow key={request.id}>
-                      <TableCell className="font-medium">{request.certificateAlias}</TableCell>
-                      <TableCell>{request.commonName}</TableCell>
-                      <TableCell>{getTypeBadge(request.type)}</TableCell>
-                      <TableCell>{request.organization}</TableCell>
+                  {filteredCertificates.map((cert) => (
+                    <TableRow key={cert.id}>
+                      <TableCell className="font-mono text-sm">{cert.id}</TableCell>
+                      <TableCell className="font-medium">{cert.host}</TableCell>
+                      <TableCell>{cert.issuerCA}</TableCell>
+                      <TableCell>{cert.algorithm}</TableCell>
                       <TableCell>
-                        {new Date(request.requestedAt).toLocaleDateString()}
+                        {new Date(cert.validFrom).toLocaleDateString()}
                       </TableCell>
-                      <TableCell>{getStatusBadge(request.status)}</TableCell>
+                      <TableCell>
+                        {new Date(cert.validTo).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(cert.status)}</TableCell>
                       <TableCell className="text-right">
-                        {request.status === "approved" && (
+                        {cert.status === "ACTIVE" && (
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => handleDownload(request)}
+                            onClick={() => handleDownload(cert)}
                             title="Download Certificate"
                           >
                             <Download className="h-4 w-4" />
                           </Button>
                         )}
-                        {request.status === "pending" && (
-                          <span className="text-sm text-muted-foreground">Awaiting approval</span>
+                        {cert.status === "EXPIRED" && (
+                          <span className="text-sm text-muted-foreground">Renewal needed</span>
                         )}
-                        {request.status === "rejected" && (
-                          <span className="text-sm text-destructive">Request denied</span>
+                        {cert.status === "REVOKED" && (
+                          <span className="text-sm text-destructive">Revoked</span>
                         )}
                       </TableCell>
                     </TableRow>
