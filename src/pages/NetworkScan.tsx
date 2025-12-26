@@ -23,6 +23,8 @@ import { Search, Radar, Shield, AlertTriangle, CheckCircle, XCircle, Loader2, Gl
 import { toast } from "@/hooks/use-toast";
 import { CertificateDetailsDialog } from "@/components/network-scan/CertificateDetailsDialog";
 import { RequestCertificateDialog } from "@/components/network-scan/RequestCertificateDialog";
+import { networkScanApi } from "@/lib/api";
+import type { NmapCertificateScan } from "@/lib/api/types";
 
 interface DiscoveredCertificate {
   id: string;
@@ -37,70 +39,6 @@ interface DiscoveredCertificate {
   status: "valid" | "expiring" | "expired" | "invalid";
 }
 
-// Sample discovered certificates data
-const sampleDiscoveredCerts: DiscoveredCertificate[] = [
-  {
-    id: "1",
-    endpoint: "192.168.1.10",
-    port: 443,
-    commonName: "api.company.com",
-    issuer: "DigiCert Global Root CA",
-    validFrom: "2024-01-15",
-    validTo: "2025-01-15",
-    daysToExpiry: 180,
-    protocol: "TLS 1.3",
-    status: "valid",
-  },
-  {
-    id: "2",
-    endpoint: "192.168.1.25",
-    port: 443,
-    commonName: "mail.company.com",
-    issuer: "Let's Encrypt Authority X3",
-    validFrom: "2024-06-01",
-    validTo: "2024-12-30",
-    daysToExpiry: 15,
-    protocol: "TLS 1.2",
-    status: "expiring",
-  },
-  {
-    id: "3",
-    endpoint: "192.168.1.50",
-    port: 8443,
-    commonName: "internal.company.local",
-    issuer: "Company Internal CA",
-    validFrom: "2023-01-01",
-    validTo: "2024-01-01",
-    daysToExpiry: -350,
-    protocol: "TLS 1.2",
-    status: "expired",
-  },
-  {
-    id: "4",
-    endpoint: "192.168.1.100",
-    port: 443,
-    commonName: "portal.company.com",
-    issuer: "GlobalSign Root CA",
-    validFrom: "2024-03-20",
-    validTo: "2025-03-20",
-    daysToExpiry: 245,
-    protocol: "TLS 1.3",
-    status: "valid",
-  },
-  {
-    id: "5",
-    endpoint: "192.168.1.75",
-    port: 443,
-    commonName: "*.company.com",
-    issuer: "Sectigo RSA Domain Validation",
-    validFrom: "2024-02-10",
-    validTo: "2025-02-10",
-    daysToExpiry: 210,
-    protocol: "TLS 1.2",
-    status: "valid",
-  },
-];
-
 export default function NetworkScan() {
   const [networkRange, setNetworkRange] = useState("");
   const [isScanning, setIsScanning] = useState(false);
@@ -112,7 +50,36 @@ export default function NetworkScan() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
 
-  const handleScan = () => {
+  const calculateDaysToExpiry = (validTo: string): number => {
+    const expiryDate = new Date(validTo);
+    const today = new Date();
+    const diffTime = expiryDate.getTime() - today.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  const getStatus = (daysToExpiry: number): DiscoveredCertificate["status"] => {
+    if (daysToExpiry < 0) return "expired";
+    if (daysToExpiry <= 30) return "expiring";
+    return "valid";
+  };
+
+  const mapApiResponseToDiscoveredCert = (cert: NmapCertificateScan): DiscoveredCertificate => {
+    const daysToExpiry = calculateDaysToExpiry(cert.validTo);
+    return {
+      id: String(cert.id),
+      endpoint: cert.host,
+      port: cert.port,
+      commonName: cert.commonName,
+      issuer: cert.issuer,
+      validFrom: cert.validFrom,
+      validTo: cert.validTo,
+      daysToExpiry,
+      protocol: `TLS (${cert.algorithm})`,
+      status: getStatus(daysToExpiry),
+    };
+  };
+
+  const handleScan = async () => {
     if (!networkRange.trim()) {
       toast({
         title: "Network Range Required",
@@ -125,15 +92,29 @@ export default function NetworkScan() {
     setIsScanning(true);
     setDiscoveredCerts([]);
 
-    // Simulate network scanning
-    setTimeout(() => {
-      setDiscoveredCerts(sampleDiscoveredCerts);
-      setIsScanning(false);
+    try {
+      const results = await networkScanApi.scan({
+        targets: networkRange,
+        ports: "443,8443,8080",
+      });
+
+      const mappedCerts = (Array.isArray(results) ? results : [results]).map(mapApiResponseToDiscoveredCert);
+      setDiscoveredCerts(mappedCerts);
+      
       toast({
         title: "Scan Complete",
-        description: `Discovered ${sampleDiscoveredCerts.length} certificate endpoints.`,
+        description: `Discovered ${mappedCerts.length} certificate endpoints.`,
       });
-    }, 3000);
+    } catch (error) {
+      console.error("Scan failed:", error);
+      toast({
+        title: "Scan Failed",
+        description: "Failed to perform network scan. Please check your connection.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   const getStatusBadge = (status: DiscoveredCertificate["status"]) => {
