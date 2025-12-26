@@ -34,7 +34,7 @@ export default function Register() {
     setIsLoading(true);
 
     try {
-      await register(email, password, name);
+      await register(email, password);
       toast({
         title: "Account created!",
         description: "Welcome to Certificate Manager.",

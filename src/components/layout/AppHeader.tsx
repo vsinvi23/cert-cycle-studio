@@ -173,7 +173,7 @@ export function AppHeader() {
           </Avatar>
           <div className="hidden md:block">
             <p className="text-sm font-medium text-foreground">{user?.name || "User"}</p>
-            <p className="text-xs text-muted-foreground">{user?.email || "user@example.com"}</p>
+            <p className="text-xs text-muted-foreground">{user?.username || "user"}</p>
           </div>
         </div>
       </div>

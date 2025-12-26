@@ -1,16 +1,17 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { authApi, getAuthToken, setAuthToken, clearAuthToken } from "@/lib/api";
 
 interface User {
   id: string;
-  email: string;
+  username: string;
   name: string;
 }
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
+  register: (username: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -21,55 +22,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored user on mount
+    // Check for stored user and token on mount
     const storedUser = localStorage.getItem("user");
-    if (storedUser) {
+    const token = getAuthToken();
+    
+    if (storedUser && token) {
       setUser(JSON.parse(storedUser));
     }
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string) => {
-    // TODO: Replace with your REST API call
-    // Example:
-    // const response = await fetch('/api/auth/login', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ email, password })
-    // });
-    // const data = await response.json();
-    
-    // Simulated login for demo
-    const mockUser: User = {
-      id: "1",
-      email,
-      name: email.split("@")[0],
-    };
-    setUser(mockUser);
-    localStorage.setItem("user", JSON.stringify(mockUser));
+  const login = async (username: string, password: string) => {
+    try {
+      // Call the CertAxis login API
+      await authApi.login({ username, password });
+      
+      // Create user object from successful login
+      const loggedInUser: User = {
+        id: "1", // The API doesn't return user ID in login response
+        username,
+        name: username,
+      };
+      
+      setUser(loggedInUser);
+      localStorage.setItem("user", JSON.stringify(loggedInUser));
+    } catch (error) {
+      // Clear any existing token on failed login
+      clearAuthToken();
+      throw error;
+    }
   };
 
-  const register = async (email: string, password: string, name: string) => {
-    // TODO: Replace with your REST API call
-    // Example:
-    // const response = await fetch('/api/auth/register', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ email, password, name })
-    // });
-    // const data = await response.json();
-    
-    // Simulated registration for demo
-    const mockUser: User = {
-      id: "1",
-      email,
-      name,
-    };
-    setUser(mockUser);
-    localStorage.setItem("user", JSON.stringify(mockUser));
+  const register = async (username: string, password: string) => {
+    try {
+      // Call the CertAxis register API
+      await authApi.register({ username, password });
+      
+      // After successful registration, log the user in
+      await login(username, password);
+    } catch (error) {
+      throw error;
+    }
   };
 
   const logout = () => {
+    authApi.logout();
     setUser(null);
     localStorage.removeItem("user");
   };
