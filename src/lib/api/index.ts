@@ -5,10 +5,17 @@ export { authApi } from "./auth";
 export { dashboardApi } from "./dashboard";
 export { certificatesApi, networkScanApi, certificateOperationsApi } from "./certificates";
 export { caApi } from "./ca";
-export { reportsApi, alertsApi } from "./reports";
+export { reportsApi } from "./reports";
 export { securityApi } from "./security";
 export { discoveryApi } from "./discovery";
 export { acmeApi, integrationsApi } from "./acme";
+export { alertsApi } from "./alerts";
+export { bulkApi } from "./bulk";
+export { jobsApi } from "./jobs";
+export { sessionsApi } from "./sessions";
+export { rateLimitApi } from "./rateLimit";
+export { certOperationsApi } from "./certOperations";
+export { acmeMonitoringApi } from "./acmeMonitoring";
 
 // Health check
 import { apiRequest } from "./config";

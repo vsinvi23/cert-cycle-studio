@@ -1,5 +1,5 @@
 // ============================================
-// CertAxis API Types - Based on OpenAPI Spec
+// CertAxis API Types - Based on OpenAPI Spec v2
 // ============================================
 
 // Authentication
@@ -26,6 +26,7 @@ export interface RegisterResponse {
 export interface User {
   id: number;
   username: string;
+  password?: string;
 }
 
 // Dashboard Metrics
@@ -94,15 +95,22 @@ export interface ComplianceScore {
 // Certificate
 export interface Certificate {
   id: number;
-  host: string;
-  issuerCA: string;
-  algorithm: string;
+  certificateName?: string;
+  certData?: string;
+  subject?: string;
+  commonName?: string;
+  host?: string;
+  issuerCA?: string;
+  issuer?: string;
+  algorithm?: string;
   keySize?: number;
   validFrom: string;
   validTo: string;
+  serialNumber?: string;
   status: "ACTIVE" | "EXPIRED" | "REVOKED";
   createdAt: string;
-  user?: User;
+  createdBy?: User;
+  expired?: boolean;
 }
 
 // Nmap Certificate Scan
@@ -190,10 +198,12 @@ export interface AlertConfiguration {
   emailRecipients?: string;
   webhookUrl?: string;
   slackWebhookUrl?: string;
+  teamsWebhookUrl?: string;
   createdAt: string;
 }
 
 export interface AlertConfigurationRequest {
+  id?: number;
   name: string;
   alertType: "EXPIRATION" | "REVOCATION" | "ISSUANCE" | "COMPLIANCE";
   enabled?: boolean;
@@ -201,6 +211,28 @@ export interface AlertConfigurationRequest {
   emailRecipients?: string;
   webhookUrl?: string;
   slackWebhookUrl?: string;
+  teamsWebhookUrl?: string;
+}
+
+export interface CertificateExpirationAlertRequest {
+  certificateId: string;
+  hostname: string;
+  daysUntilExpiry: number;
+  alertConfigId: number;
+}
+
+export interface BulkOperationAlertRequest {
+  operationType: "ISSUE" | "RENEW" | "REVOKE";
+  totalCount: number;
+  successCount: number;
+  failedCount: number;
+  alertConfigId: number;
+}
+
+export interface GeneralAlertRequest {
+  subject: string;
+  message: string;
+  alertConfigId: number;
 }
 
 // Alert History
@@ -271,6 +303,85 @@ export interface CertificateTemplate {
   createdAt: string;
 }
 
+// Bulk Operations
+export interface BulkIssueRequest {
+  certificateRequests: string[];
+}
+
+export interface BulkRenewRequest {
+  certificateIds: number[];
+}
+
+export interface BulkRevokeRequest {
+  certificateIds: number[];
+  reason?: string;
+}
+
+export interface BulkOperationResult {
+  totalCount: number;
+  successCount: number;
+  failedCount: number;
+  results: Array<{
+    id: number;
+    success: boolean;
+    error?: string;
+  }>;
+}
+
+// Background Jobs
+export interface BackgroundJob {
+  id: number;
+  jobId: string;
+  jobType: string;
+  status: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
+  progress: number;
+  result?: string;
+  createdBy: number;
+  startedAt?: string;
+  completedAt?: string;
+  createdAt: string;
+  finished: boolean;
+  durationSeconds?: number;
+  running: boolean;
+}
+
+// Session Management
+export interface UserSession {
+  id: number;
+  userId: number;
+  sessionToken: string;
+  ipAddress: string;
+  userAgent: string;
+  createdAt: string;
+  lastActivityAt: string;
+  expiresAt: string;
+  isActive: boolean;
+}
+
+// Rate Limit
+export interface RateLimitViolation {
+  id: number;
+  ipAddress: string;
+  userId?: number;
+  endpoint: string;
+  method: string;
+  violationType: string;
+  userTier?: string;
+  violatedAt: string;
+  userAgent?: string;
+  notes?: string;
+}
+
+export interface RateLimitMetrics {
+  totalViolations: number;
+  violationsByEndpoint: Record<string, number>;
+  violationsByIp: Record<string, number>;
+  topOffenders: Array<{
+    ip: string;
+    count: number;
+  }>;
+}
+
 // ACME Types
 export interface AcmeProvider {
   id: number;
@@ -290,6 +401,31 @@ export interface AcmeProvider {
   updatedAt: string;
 }
 
+export interface CreateAcmeProviderRequest {
+  name: string;
+  type: "LETS_ENCRYPT_PRODUCTION" | "LETS_ENCRYPT_STAGING" | "ZEROSSL" | "BUYPASS" | "CUSTOM";
+  directoryUrl?: string;
+  isStaging?: boolean;
+  isActive?: boolean;
+  eabKid?: string;
+  eabHmacKey?: string;
+  description?: string;
+}
+
+export interface AcmeAccount {
+  id: number;
+  email: string;
+  acmeServerUrl: string;
+  accountUrl: string;
+  privateKey: string;
+  publicKey: string;
+  status: string;
+  termsAgreed: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+}
+
 export interface AcmeOrder {
   id: number;
   orderId: string;
@@ -299,6 +435,100 @@ export interface AcmeOrder {
   expiresAt: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CreateAcmeOrderRequest {
+  providerId: number;
+  accountId: number;
+  domains: string[];
+  challengeType?: "HTTP_01" | "DNS_01" | "TLS_ALPN_01";
+  notes?: string;
+}
+
+export interface AcmeAuthorization {
+  id: number;
+  domain: string;
+  status: "PENDING" | "PROCESSING" | "VALID" | "INVALID" | "EXPIRED" | "REVOKED";
+  expiresAt: string;
+  authorizationUrl: string;
+  isWildcard: boolean;
+  createdAt: string;
+  updatedAt: string;
+  challenges: AcmeChallenge[];
+}
+
+export interface AcmeChallenge {
+  id: number;
+  type: "HTTP_01" | "DNS_01" | "TLS_ALPN_01";
+  status: "PENDING" | "PROCESSING" | "VALID" | "INVALID";
+  token: string;
+  challengeUrl: string;
+  validatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ACME Monitoring
+export interface AcmeWebhook {
+  id: number;
+  name: string;
+  url: string;
+  events: string[];
+  secretKey?: string;
+  isActive: boolean;
+  lastTriggered?: string;
+  failureCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AcmeMetrics {
+  id: number;
+  metricDate: string;
+  providerType: string;
+  ordersCreated: number;
+  ordersSucceeded: number;
+  ordersFailed: number;
+  ordersPending: number;
+  challengesValidated: number;
+  challengesFailed: number;
+  avgIssuanceTime: number;
+  minIssuanceTime: number;
+  maxIssuanceTime: number;
+  renewalsAttempted: number;
+  renewalsSucceeded: number;
+  renewalsFailed: number;
+  http01Challenges: number;
+  dns01Challenges: number;
+  tlsAlpn01Challenges: number;
+  apiRequestsTotal: number;
+  apiRequestsFailed: number;
+  rateLimitHits: number;
+  successRate: number;
+}
+
+export interface AcmeDashboardSummary {
+  totalOrders: number;
+  activeProviders: number;
+  pendingChallenges: number;
+  successRate: number;
+  recentOrders: AcmeOrder[];
+}
+
+// Certificate Operations
+export interface CertificateValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  validFrom: string;
+  validTo: string;
+  issuer: string;
+  subject: string;
+}
+
+export interface CertificateComparisonResult {
+  areSame: boolean;
+  differences: string[];
 }
 
 // Pagination
