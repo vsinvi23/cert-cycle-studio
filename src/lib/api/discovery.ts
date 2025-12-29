@@ -1,7 +1,66 @@
 import { apiRequest } from "./config";
-import type { DiscoveryConfiguration } from "./types";
+import type { DiscoveryConfiguration, DiscoveryResult, CreateDiscoveryRequest } from "./types";
 
 export const discoveryApi = {
+  /**
+   * Get all discovery configurations
+   */
+  getAll: async (): Promise<DiscoveryConfiguration[]> => {
+    return apiRequest<DiscoveryConfiguration[]>("/api/discovery/configurations");
+  },
+
+  /**
+   * Get discovery configuration by ID
+   */
+  getById: async (id: number): Promise<DiscoveryConfiguration> => {
+    return apiRequest<DiscoveryConfiguration>(`/api/discovery/configurations/${id}`);
+  },
+
+  /**
+   * Create discovery configuration
+   */
+  create: async (request: CreateDiscoveryRequest): Promise<DiscoveryConfiguration> => {
+    return apiRequest<DiscoveryConfiguration>("/api/discovery/configurations", {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
+  },
+
+  /**
+   * Update discovery configuration
+   */
+  update: async (id: number, request: CreateDiscoveryRequest): Promise<DiscoveryConfiguration> => {
+    return apiRequest<DiscoveryConfiguration>(`/api/discovery/configurations/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(request),
+    });
+  },
+
+  /**
+   * Delete discovery configuration
+   */
+  delete: async (id: number): Promise<void> => {
+    return apiRequest<void>(`/api/discovery/configurations/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  /**
+   * Run discovery scan manually
+   */
+  run: async (id: number): Promise<DiscoveryResult> => {
+    return apiRequest<DiscoveryResult>(`/api/discovery/configurations/${id}/run`, {
+      method: "POST",
+    });
+  },
+
+  /**
+   * Get discovery results
+   */
+  getResults: async (configId: number): Promise<DiscoveryResult[]> => {
+    return apiRequest<DiscoveryResult[]>(`/api/discovery/configurations/${configId}/results`);
+  },
+
   /**
    * Scan LDAP/Active Directory for certificates
    */
@@ -20,7 +79,6 @@ export const discoveryApi = {
 
   /**
    * Scan cloud provider for certificates
-   * @param provider - Cloud provider (aws, azure, gcp)
    */
   scanCloud: async (provider: string, credentials: Record<string, string>): Promise<string> => {
     return apiRequest<string>(`/api/discovery/scan/cloud?provider=${encodeURIComponent(provider)}`, {
