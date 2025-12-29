@@ -1,5 +1,5 @@
 import { apiRequest } from "./config";
-import type { AuditLog, AlertHistory } from "./types";
+import type { AuditLog } from "./types";
 
 export const reportsApi = {
   /**
@@ -41,54 +41,5 @@ export const reportsApi = {
     if (endDate) params.push(`endDate=${encodeURIComponent(endDate)}`);
     if (params.length > 0) url += `?${params.join("&")}`;
     return apiRequest<AuditLog[]>(url);
-  },
-};
-
-export const alertsApi = {
-  /**
-   * Get alert history
-   */
-  getHistory: async (startDate?: string, endDate?: string): Promise<AlertHistory[]> => {
-    let url = "/api/alerts/history";
-    const params: string[] = [];
-    if (startDate) params.push(`startDate=${encodeURIComponent(startDate)}`);
-    if (endDate) params.push(`endDate=${encodeURIComponent(endDate)}`);
-    if (params.length > 0) url += `?${params.join("&")}`;
-    return apiRequest<AlertHistory[]>(url);
-  },
-
-  /**
-   * Configure alert
-   */
-  configure: async (config: {
-    name: string;
-    alertType: "EXPIRATION" | "REVOCATION" | "ISSUANCE" | "COMPLIANCE";
-    enabled?: boolean;
-    thresholdDays?: number;
-    emailRecipients?: string;
-    webhookUrl?: string;
-    slackWebhookUrl?: string;
-  }): Promise<unknown> => {
-    return apiRequest("/api/alerts/configure", {
-      method: "POST",
-      body: JSON.stringify(config),
-    });
-  },
-
-  /**
-   * Register webhook
-   */
-  registerWebhook: async (webhookConfig: Record<string, string>): Promise<unknown> => {
-    return apiRequest("/api/webhooks/register", {
-      method: "POST",
-      body: JSON.stringify(webhookConfig),
-    });
-  },
-
-  /**
-   * Get notification preferences
-   */
-  getNotificationPreferences: async (): Promise<unknown> => {
-    return apiRequest("/api/notifications/preferences");
   },
 };
