@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { authApi, getAuthToken, setAuthToken, clearAuthToken } from "@/lib/api";
+import { authApi, clearAuthToken } from "@/lib/api";
 
 interface User {
   id: string;
@@ -15,22 +15,19 @@ interface AuthContextType {
   logout: () => void;
 }
 
+// TEMPORARY: Mock user for development - bypasses authentication
+const MOCK_USER: User = {
+  id: "1",
+  username: "admin",
+  name: "Admin User",
+};
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Check for stored user and token on mount
-    const storedUser = localStorage.getItem("user");
-    const token = getAuthToken();
-    
-    if (storedUser && token) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
-  }, []);
+  // TEMPORARY: Start with mock user to bypass login
+  const [user, setUser] = useState<User | null>(MOCK_USER);
+  const [isLoading, setIsLoading] = useState(false);
 
   const login = async (username: string, password: string) => {
     try {
