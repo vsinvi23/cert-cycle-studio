@@ -539,3 +539,125 @@ export interface PaginatedResponse<T> {
   size: number;
   number: number;
 }
+
+// API Key Management
+export interface ApiKey {
+  id: number;
+  name: string;
+  keyPrefix: string;
+  permissions: string[];
+  expiresAt?: string;
+  lastUsedAt?: string;
+  lastUsedIp?: string;
+  enabled: boolean;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface CreateApiKeyRequest {
+  name: string;
+  permissions: string[];
+  expiresInDays?: number;
+}
+
+export interface CreateApiKeyResponse {
+  id: number;
+  name: string;
+  keyPlainText: string;
+  keyPrefix: string;
+  permissions: string[];
+  expiresAt?: string;
+}
+
+// Session Analytics
+export interface SessionAnalytics {
+  totalSessions: number;
+  activeSessions: number;
+  deviceBreakdown: Record<string, number>;
+  ipAddresses: string[];
+  averageSessionDuration: number;
+  loginFrequency: Record<string, number>;
+}
+
+export interface SuspiciousActivity {
+  userId: number;
+  username: string;
+  uniqueIps: number;
+  ipAddresses: string[];
+  lastActivityAt: string;
+  riskLevel: "LOW" | "MEDIUM" | "HIGH";
+}
+
+// Discovery Configuration
+export interface CreateDiscoveryRequest {
+  name: string;
+  discoveryType: "LDAP" | "CLOUD" | "FILESYSTEM" | "NETWORK";
+  configuration: Record<string, string>;
+  schedule?: string;
+  enabled?: boolean;
+}
+
+export interface DiscoveryResult {
+  id: number;
+  configurationId: number;
+  certificatesFound: number;
+  newCertificates: number;
+  existingCertificates: number;
+  status: "COMPLETED" | "FAILED" | "RUNNING";
+  startedAt: string;
+  completedAt?: string;
+  details: Record<string, unknown>[];
+}
+
+// Certificate Template
+export interface CreateCertificateTemplateRequest {
+  name: string;
+  description?: string;
+  caAlias: string;
+  algorithm: string;
+  keySize: number;
+  validityDays: number;
+  subjectTemplate?: string;
+}
+
+// System Health
+export interface SystemHealth {
+  status: "UP" | "DOWN" | "DEGRADED";
+  uptime: number;
+  version: string;
+  database: {
+    status: "UP" | "DOWN";
+    responseTime: number;
+  };
+  redis?: {
+    status: "UP" | "DOWN";
+    responseTime: number;
+  };
+  acme?: {
+    status: "UP" | "DOWN";
+    activeProviders: number;
+  };
+}
+
+// Compliance Report
+export interface ComplianceReport {
+  reportDate: string;
+  standard: string;
+  overallCompliance: number;
+  findings: {
+    compliant: number;
+    nonCompliant: number;
+    warnings: number;
+  };
+  requirements: Array<{
+    requirement: string;
+    status: string;
+    details: string;
+  }>;
+  nonCompliantCertificates: Array<{
+    id: number;
+    domain: string;
+    issue: string;
+    remediation: string;
+  }>;
+}
