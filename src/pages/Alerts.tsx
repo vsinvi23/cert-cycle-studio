@@ -23,9 +23,17 @@ export default function Alerts() {
   const [activeTab, setActiveTab] = useState<"config" | "history">("config");
 
   // Form state
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    alertType: "EXPIRATION" | "REVOCATION" | "ISSUANCE" | "COMPLIANCE";
+    enabled: boolean;
+    thresholdDays: number;
+    emailRecipients: string;
+    webhookUrl: string;
+    slackWebhookUrl: string;
+  }>({
     name: "",
-    alertType: "EXPIRATION" as const,
+    alertType: "EXPIRATION",
     enabled: true,
     thresholdDays: 30,
     emailRecipients: "",
