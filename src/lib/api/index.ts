@@ -16,12 +16,4 @@ export { sessionsApi } from "./sessions";
 export { rateLimitApi } from "./rateLimit";
 export { certOperationsApi } from "./certOperations";
 export { acmeMonitoringApi } from "./acmeMonitoring";
-
-// Health check
-import { apiRequest } from "./config";
-
-export const healthApi = {
-  check: async (): Promise<{ status: string }> => {
-    return apiRequest<{ status: string }>("/api/health");
-  },
-};
+export { healthApi } from "./health";

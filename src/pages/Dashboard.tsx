@@ -1,9 +1,28 @@
 import { useEffect, useState } from "react";
-import { FileKey, AlertTriangle, CheckCircle, Clock, Shield, Activity, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { 
+  FileKey, 
+  AlertTriangle, 
+  CheckCircle, 
+  Clock, 
+  Shield, 
+  Activity, 
+  Loader2, 
+  RefreshCw,
+  Server,
+  Database,
+  Zap,
+  ArrowRight,
+  Plus,
+  Search,
+  Key,
+  Bell
+} from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { dashboardApi } from "@/lib/api";
-import type { DashboardMetrics, ExpiringCertificate, CertificateHealth, ComplianceScore } from "@/lib/api/types";
+import { Button } from "@/components/ui/button";
+import { dashboardApi, healthApi, reportsApi } from "@/lib/api";
+import type { DashboardMetrics, ExpiringCertificate, CertificateHealth, ComplianceScore, SystemHealth, AuditLog } from "@/lib/api/types";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
@@ -12,34 +31,48 @@ export default function Dashboard() {
   const [expiringCerts, setExpiringCerts] = useState<ExpiringCertificate[]>([]);
   const [health, setHealth] = useState<CertificateHealth | null>(null);
   const [compliance, setCompliance] = useState<ComplianceScore | null>(null);
+  const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
+  const [recentActivity, setRecentActivity] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      setIsLoading(true);
-      setError(null);
+  const fetchDashboardData = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const [metricsData, expiringData, healthData, complianceData] = await Promise.all([
+        dashboardApi.getMetrics(),
+        dashboardApi.getExpiringCertificates(30),
+        dashboardApi.getCertificateHealth(),
+        dashboardApi.getComplianceScore(),
+      ]);
       
-      try {
-        const [metricsData, expiringData, healthData, complianceData] = await Promise.all([
-          dashboardApi.getMetrics(),
-          dashboardApi.getExpiringCertificates(30),
-          dashboardApi.getCertificateHealth(),
-          dashboardApi.getComplianceScore(),
-        ]);
-        
-        setMetrics(metricsData);
-        setExpiringCerts(Array.isArray(expiringData) ? expiringData : []);
-        setHealth(healthData);
-        setCompliance(complianceData);
-      } catch (err) {
-        console.error("Failed to fetch dashboard data:", err);
-        setError("Failed to load dashboard data. Please check your API connection.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      setMetrics(metricsData);
+      setExpiringCerts(Array.isArray(expiringData) ? expiringData : []);
+      setHealth(healthData);
+      setCompliance(complianceData);
 
+      // Fetch system health and recent activity separately (non-blocking)
+      try {
+        const [sysHealth, activity] = await Promise.all([
+          healthApi.check(),
+          reportsApi.getAuditLogs(),
+        ]);
+        setSystemHealth(sysHealth);
+        setRecentActivity(Array.isArray(activity) ? activity.slice(0, 5) : []);
+      } catch {
+        // These are non-critical, ignore failures
+      }
+    } catch (err) {
+      console.error("Failed to fetch dashboard data:", err);
+      setError("Failed to load dashboard data. Please check your API connection.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchDashboardData();
   }, []);
 
@@ -50,6 +83,7 @@ export default function Dashboard() {
       description: "Across all domains",
       icon: FileKey,
       color: "text-primary",
+      bgColor: "bg-primary/10",
     },
     {
       title: "Active",
@@ -57,6 +91,7 @@ export default function Dashboard() {
       description: "Valid certificates",
       icon: CheckCircle,
       color: "text-green-500",
+      bgColor: "bg-green-500/10",
     },
     {
       title: "Expiring Soon",
@@ -64,6 +99,7 @@ export default function Dashboard() {
       description: "Within 30 days",
       icon: Clock,
       color: "text-yellow-500",
+      bgColor: "bg-yellow-500/10",
     },
     {
       title: "Expired",
@@ -71,7 +107,15 @@ export default function Dashboard() {
       description: "Requires attention",
       icon: AlertTriangle,
       color: "text-destructive",
+      bgColor: "bg-destructive/10",
     },
+  ];
+
+  const quickActions = [
+    { title: "Issue Certificate", icon: Plus, url: "/certificate-management/issue", color: "bg-primary" },
+    { title: "Network Scan", icon: Search, url: "/network-scan", color: "bg-blue-500" },
+    { title: "Manage API Keys", icon: Key, url: "/api-keys", color: "bg-purple-500" },
+    { title: "View Alerts", icon: Bell, url: "/alerts", color: "bg-orange-500" },
   ];
 
   const getSeverityBadge = (severity: ExpiringCertificate["severity"]) => {
@@ -95,6 +139,15 @@ export default function Dashboard() {
     }
   };
 
+  const getSystemStatusColor = (status: SystemHealth["status"] | undefined) => {
+    switch (status) {
+      case "UP": return "bg-green-500";
+      case "DEGRADED": return "bg-yellow-500";
+      case "DOWN": return "bg-red-500";
+      default: return "bg-muted";
+    }
+  };
+
   if (isLoading) {
     return (
       <AppLayout>
@@ -109,11 +162,18 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Overview of your certificate inventory and status
-          </p>
+        {/* Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-muted-foreground">
+              Overview of your certificate inventory and status
+            </p>
+          </div>
+          <Button variant="outline" onClick={fetchDashboardData}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
         </div>
 
         {error && (
@@ -124,12 +184,31 @@ export default function Dashboard() {
           </Card>
         )}
 
+        {/* Quick Actions */}
+        <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+          {quickActions.map((action) => (
+            <Link key={action.title} to={action.url}>
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+                <CardContent className="flex items-center gap-3 p-4">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${action.color}`}>
+                    <action.icon className="h-5 w-5 text-white" />
+                  </div>
+                  <span className="text-sm font-medium">{action.title}</span>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+
+        {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => (
             <Card key={stat.title}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${stat.bgColor}`}>
+                  <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stat.value}</div>
@@ -139,6 +218,96 @@ export default function Dashboard() {
           ))}
         </div>
 
+        {/* System Health & Recent Activity Row */}
+        <div className="grid gap-4 md:grid-cols-3">
+          {/* System Health */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Server className="h-4 w-4" />
+                System Health
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Overall Status</span>
+                <div className="flex items-center gap-2">
+                  <div className={`h-2 w-2 rounded-full ${getSystemStatusColor(systemHealth?.status)}`} />
+                  <span className="text-sm font-medium">{systemHealth?.status || "Unknown"}</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground flex items-center gap-1">
+                  <Database className="h-3 w-3" />
+                  Database
+                </span>
+                <Badge variant={systemHealth?.database?.status === "UP" ? "outline" : "destructive"} className="text-xs">
+                  {systemHealth?.database?.status || "—"}
+                </Badge>
+              </div>
+              {systemHealth?.redis && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Zap className="h-3 w-3" />
+                    Redis Cache
+                  </span>
+                  <Badge variant={systemHealth.redis.status === "UP" ? "outline" : "destructive"} className="text-xs">
+                    {systemHealth.redis.status}
+                  </Badge>
+                </div>
+              )}
+              {systemHealth?.acme && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">ACME Providers</span>
+                  <span className="text-sm font-medium">{systemHealth.acme.activeProviders} active</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Recent Activity */}
+          <Card className="md:col-span-2">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Activity className="h-4 w-4" />
+                Recent Activity
+              </CardTitle>
+              <Link to="/audit-logs">
+                <Button variant="ghost" size="sm">
+                  View All <ArrowRight className="ml-1 h-3 w-3" />
+                </Button>
+              </Link>
+            </CardHeader>
+            <CardContent>
+              {recentActivity.length > 0 ? (
+                <div className="space-y-2">
+                  {recentActivity.map((log) => (
+                    <div key={log.id} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
+                      <div className="flex-1">
+                        <span className="font-medium">{log.action}</span>
+                        <span className="text-muted-foreground"> · {log.entityType}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(log.timestamp).toLocaleString()}
+                        </span>
+                        <Badge variant={log.status === "SUCCESS" ? "outline" : "destructive"} className="text-xs">
+                          {log.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex h-24 items-center justify-center text-muted-foreground text-sm">
+                  No recent activity
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Health & Compliance Row */}
         <div className="grid gap-4 md:grid-cols-2">
           {/* Health Score Card */}
           <Card>
@@ -260,9 +429,16 @@ export default function Dashboard() {
 
         {/* Expiring Certificates */}
         <Card>
-          <CardHeader>
-            <CardTitle>Upcoming Expirations</CardTitle>
-            <CardDescription>Certificates expiring in the next 30 days</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Upcoming Expirations</CardTitle>
+              <CardDescription>Certificates expiring in the next 30 days</CardDescription>
+            </div>
+            <Link to="/renewals">
+              <Button variant="outline" size="sm">
+                Manage Renewals <ArrowRight className="ml-1 h-3 w-3" />
+              </Button>
+            </Link>
           </CardHeader>
           <CardContent>
             {expiringCerts.length > 0 ? (
@@ -275,7 +451,7 @@ export default function Dashboard() {
                     <div className="flex-1">
                       <p className="font-medium">{cert.host}</p>
                       <p className="text-sm text-muted-foreground">
-                        Issuer: {cert.issuerCA} • {cert.algorithm}
+                        Issuer: {cert.issuerCA} · {cert.algorithm}
                       </p>
                     </div>
                     <div className="flex items-center gap-4">
