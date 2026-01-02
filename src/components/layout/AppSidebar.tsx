@@ -23,7 +23,8 @@ import {
   FileCheck,
   Zap,
   Monitor,
-  Layers
+  Layers,
+  Brain
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -88,6 +89,12 @@ const navSections = [
       { title: "Rate Limits", url: "/rate-limits", icon: Clock },
       { title: "Users", url: "/user-management/manage", icon: Users },
       { title: "Roles", url: "/user-management/manage-role", icon: UserCog },
+    ],
+  },
+  {
+    title: "AI & Analytics",
+    items: [
+      { title: "AI Insights", url: "/ai-insights", icon: Brain },
     ],
   },
   {

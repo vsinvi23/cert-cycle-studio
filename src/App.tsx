@@ -34,6 +34,7 @@ import CertificateTemplates from "./pages/CertificateTemplates";
 import Discovery from "./pages/Discovery";
 import SystemSettings from "./pages/SystemSettings";
 import ComplianceReports from "./pages/ComplianceReports";
+import AIInsights from "./pages/AIInsights";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -122,6 +123,9 @@ const App = () => (
             <Route path="/user-management/manage" element={<ProtectedRoute><ManageUser /></ProtectedRoute>} />
             <Route path="/user-management/create-role" element={<ProtectedRoute><CreateRole /></ProtectedRoute>} />
             <Route path="/user-management/manage-role" element={<ProtectedRoute><ManageRole /></ProtectedRoute>} />
+            
+            {/* AI & Analytics */}
+            <Route path="/ai-insights" element={<ProtectedRoute><AIInsights /></ProtectedRoute>} />
             
             {/* Reports & Audit */}
             <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
