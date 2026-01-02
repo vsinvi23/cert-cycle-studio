@@ -16,7 +16,15 @@ import {
   Plus,
   Search,
   Key,
-  Bell
+  Bell,
+  Brain,
+  TrendingUp,
+  Eye,
+  EyeOff,
+  ThumbsUp,
+  Target,
+  Layers,
+  FileWarning
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -25,6 +33,104 @@ import { dashboardApi, healthApi, reportsApi } from "@/lib/api";
 import type { DashboardMetrics, ExpiringCertificate, CertificateHealth, ComplianceScore, SystemHealth, AuditLog } from "@/lib/api/types";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+// AI Insights Mock Data
+const renewalPredictions = [
+  {
+    id: 1,
+    certificateName: "api.example.com",
+    domain: "example.com",
+    expiryDate: "2025-02-15",
+    riskScore: 85,
+    failureProbability: 0.72,
+    trigger: "Daily batch run",
+    recommendedActions: [
+      "Verify DNS records are accessible",
+      "Check ACME account credentials",
+      "Ensure port 80/443 is open for validation"
+    ],
+    factors: [
+      { name: "Previous failure history", impact: "High" },
+      { name: "DNS propagation issues", impact: "Medium" },
+      { name: "Rate limit approaching", impact: "Low" }
+    ]
+  },
+  {
+    id: 2,
+    certificateName: "mail.company.org",
+    domain: "company.org",
+    expiryDate: "2025-02-20",
+    riskScore: 45,
+    failureProbability: 0.28,
+    trigger: "Config change",
+    recommendedActions: ["Review recent configuration changes"],
+    factors: [{ name: "Config modification", impact: "Medium" }]
+  },
+  {
+    id: 3,
+    certificateName: "cdn.webapp.io",
+    domain: "webapp.io",
+    expiryDate: "2025-02-25",
+    riskScore: 15,
+    failureProbability: 0.08,
+    trigger: "New renewal attempt",
+    recommendedActions: ["No immediate action required"],
+    factors: [{ name: "Standard renewal cycle", impact: "Low" }]
+  }
+];
+
+const initialAnomalies = [
+  {
+    id: 1,
+    type: "Issuance spike",
+    description: "47 certificates issued in the last hour vs avg 5/hour",
+    severity: "high",
+    detectedAt: "2025-01-02T10:30:00Z",
+    affectedDomains: ["*.example.com"],
+    status: "active"
+  },
+  {
+    id: 2,
+    type: "Domain pattern anomaly",
+    description: "Sequential subdomains detected (test1, test2, test3...)",
+    severity: "medium",
+    detectedAt: "2025-01-02T09:15:00Z",
+    affectedDomains: ["test1.example.com", "test2.example.com"],
+    status: "active"
+  }
+];
+
+const policyDrifts = [
+  {
+    id: 1,
+    rule: "Manual override threshold exceeded",
+    description: "25% of renewals manually overridden (threshold: 20%)",
+    current: "25%",
+    suggestedTemplate: {
+      name: "Flexible Renewal Policy",
+      rules: ["Allow renewal 45 days before expiry", "Auto-approve for verified domains"]
+    }
+  },
+  {
+    id: 2,
+    rule: "Repeated exception pattern",
+    description: "Same exception applied 5 times in 30 days",
+    current: "5 times",
+    suggestedTemplate: {
+      name: "Streamlined EV Policy",
+      rules: ["Auto-approve EV bypass for internal domains"]
+    }
+  }
+];
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
@@ -35,6 +141,11 @@ export default function Dashboard() {
   const [recentActivity, setRecentActivity] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // AI Insights state
+  const [anomalies, setAnomalies] = useState(initialAnomalies);
+  const [selectedPrediction, setSelectedPrediction] = useState<typeof renewalPredictions[0] | null>(null);
+  const [selectedDrift, setSelectedDrift] = useState<typeof policyDrifts[0] | null>(null);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -146,6 +257,27 @@ export default function Dashboard() {
       case "DOWN": return "bg-red-500";
       default: return "bg-muted";
     }
+  };
+
+  // AI Insights helpers
+  const getRiskColor = (score: number) => {
+    if (score >= 70) return "text-destructive";
+    if (score >= 40) return "text-yellow-500";
+    return "text-green-500";
+  };
+
+  const getRiskBadge = (score: number) => {
+    if (score >= 70) return <Badge variant="destructive">High Risk</Badge>;
+    if (score >= 40) return <Badge className="bg-yellow-500 text-white">Medium Risk</Badge>;
+    return <Badge className="bg-green-500 text-white">Low Risk</Badge>;
+  };
+
+  const handleDismissAnomaly = (id: number) => {
+    setAnomalies(prev => prev.map(a => a.id === id ? { ...a, status: "dismissed" } : a));
+  };
+
+  const handleMarkExpected = (id: number) => {
+    setAnomalies(prev => prev.map(a => a.id === id ? { ...a, status: "expected" } : a));
   };
 
   if (isLoading) {
@@ -475,6 +607,216 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+
+        {/* AI Insights Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-primary" />
+              AI Insights
+            </CardTitle>
+            <CardDescription>
+              Predictive analytics and anomaly detection (read-only, does NOT alter schedules or initiate renewals)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="renewal" className="space-y-4">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="renewal" className="text-xs sm:text-sm">
+                  <TrendingUp className="h-3 w-3 mr-1 hidden sm:inline" />
+                  Renewal Predictions
+                </TabsTrigger>
+                <TabsTrigger value="anomaly" className="text-xs sm:text-sm">
+                  <Activity className="h-3 w-3 mr-1 hidden sm:inline" />
+                  Anomaly Detection
+                </TabsTrigger>
+                <TabsTrigger value="drift" className="text-xs sm:text-sm">
+                  <Target className="h-3 w-3 mr-1 hidden sm:inline" />
+                  Policy Drift
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Renewal Predictions Tab */}
+              <TabsContent value="renewal" className="space-y-3">
+                {renewalPredictions.map((prediction) => (
+                  <div key={prediction.id} className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="flex-1">
+                      <p className="font-medium">{prediction.certificateName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Expires: {prediction.expiryDate} · Trigger: {prediction.trigger}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <div className="flex items-center gap-2">
+                          <Progress value={prediction.riskScore} className="w-16 h-2" />
+                          <span className={`text-sm font-medium ${getRiskColor(prediction.riskScore)}`}>
+                            {prediction.riskScore}%
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Failure: {(prediction.failureProbability * 100).toFixed(0)}%
+                        </p>
+                      </div>
+                      {getRiskBadge(prediction.riskScore)}
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedPrediction(prediction)}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </TabsContent>
+
+              {/* Anomaly Detection Tab */}
+              <TabsContent value="anomaly" className="space-y-3">
+                {anomalies.map((anomaly) => (
+                  <div key={anomaly.id} className={`rounded-lg border p-3 ${anomaly.status !== 'active' ? 'opacity-50' : ''}`}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          {anomaly.type === "Issuance spike" ? (
+                            <Zap className="h-4 w-4 text-yellow-500" />
+                          ) : (
+                            <FileWarning className="h-4 w-4 text-orange-500" />
+                          )}
+                          <span className="font-medium">{anomaly.type}</span>
+                          <Badge variant={anomaly.severity === "high" ? "destructive" : "secondary"}>
+                            {anomaly.severity}
+                          </Badge>
+                          {anomaly.status !== "active" && (
+                            <Badge variant="outline">{anomaly.status}</Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{anomaly.description}</p>
+                        <div className="flex gap-1 mt-1">
+                          {anomaly.affectedDomains.map((d, i) => (
+                            <Badge key={i} variant="outline" className="text-xs">{d}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                      {anomaly.status === "active" && (
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => handleDismissAnomaly(anomaly.id)}>
+                            <EyeOff className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleMarkExpected(anomaly.id)}>
+                            <ThumbsUp className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </TabsContent>
+
+              {/* Policy Drift Tab */}
+              <TabsContent value="drift" className="space-y-3">
+                {policyDrifts.map((drift) => (
+                  <div key={drift.id} className="rounded-lg border p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                          <span className="font-medium">{drift.rule}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{drift.description}</p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => setSelectedDrift(drift)}>
+                        <Layers className="h-4 w-4 mr-1" />
+                        View Suggestion
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+
+        {/* Prediction Details Dialog */}
+        <Dialog open={!!selectedPrediction} onOpenChange={() => setSelectedPrediction(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Renewal Prediction Details</DialogTitle>
+              <DialogDescription>{selectedPrediction?.certificateName}</DialogDescription>
+            </DialogHeader>
+            {selectedPrediction && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-3 rounded-lg bg-muted/50">
+                    <p className="text-sm text-muted-foreground">Risk Score</p>
+                    <p className={`text-2xl font-bold ${getRiskColor(selectedPrediction.riskScore)}`}>
+                      {selectedPrediction.riskScore}%
+                    </p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-muted/50">
+                    <p className="text-sm text-muted-foreground">Failure Probability</p>
+                    <p className="text-2xl font-bold">
+                      {(selectedPrediction.failureProbability * 100).toFixed(0)}%
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-medium mb-2">Contributing Factors</p>
+                  {selectedPrediction.factors.map((f, i) => (
+                    <div key={i} className="flex justify-between py-1 text-sm">
+                      <span>{f.name}</span>
+                      <Badge variant={f.impact === "High" ? "destructive" : "secondary"}>{f.impact}</Badge>
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <p className="text-sm font-medium mb-2">Recommended Actions</p>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    {selectedPrediction.recommendedActions.map((a, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <CheckCircle className="h-3 w-3 text-green-500 mt-1" />
+                        {a}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <Alert>
+                  <Shield className="h-4 w-4" />
+                  <AlertDescription>
+                    This prediction is advisory only. It does NOT alter ARI schedule or initiate renewals.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Policy Drift Dialog */}
+        <Dialog open={!!selectedDrift} onOpenChange={() => setSelectedDrift(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Suggested Policy Template</DialogTitle>
+              <DialogDescription>{selectedDrift?.suggestedTemplate.name} (Read-only)</DialogDescription>
+            </DialogHeader>
+            {selectedDrift && (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium mb-2">Suggested Rules</p>
+                  <ul className="space-y-2">
+                    {selectedDrift.suggestedTemplate.rules.map((r, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm bg-muted/50 p-2 rounded">
+                        <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
+                        {r}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <Alert>
+                  <Shield className="h-4 w-4" />
+                  <AlertDescription>
+                    This is a read-only suggestion. Review with your security team before implementing changes.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
