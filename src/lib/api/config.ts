@@ -1,6 +1,9 @@
 // CertAxis API Configuration
-// Base URL - can be configured via environment variable
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+// Import base URL from centralized config
+import { API_BASE_URL, API_TIMEOUT } from "./apiConfig";
+
+// Re-export for backward compatibility
+export { API_BASE_URL };
 
 // Token management
 let authToken: string | null = null;
