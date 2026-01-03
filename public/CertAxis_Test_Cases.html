@@ -2454,11 +2454,1334 @@
         </tr>
     </table>
 
+    <!-- SECTION 16: WEBPAGE USE CASES & FIELD SPECIFICATIONS -->
+    <h2>16. Webpage Use Cases & Field Specifications</h2>
+    
+    <h3>16.1 Login Page (/login)</h3>
+    <div class="section-summary">
+        <strong>Purpose:</strong> User authentication to access the system<br>
+        <strong>Route:</strong> /login<br>
+        <strong>Access:</strong> Public (unauthenticated users)
+    </div>
+    
+    <h4>Field Specifications</h4>
+    <table>
+        <tr>
+            <th>Field Name</th>
+            <th>Field Type</th>
+            <th>Required</th>
+            <th>Validation Rules</th>
+            <th>API Mapping</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>Email Address</td>
+            <td>Input (email)</td>
+            <td>Yes</td>
+            <td>Valid email format, max 100 chars</td>
+            <td>username/email</td>
+            <td>User's email for authentication</td>
+        </tr>
+        <tr>
+            <td>Password</td>
+            <td>Input (password)</td>
+            <td>Yes</td>
+            <td>Required, min 8 chars</td>
+            <td>password</td>
+            <td>User's password (masked)</td>
+        </tr>
+        <tr>
+            <td>Show Password Toggle</td>
+            <td>Button (icon)</td>
+            <td>No</td>
+            <td>N/A</td>
+            <td>N/A (UI only)</td>
+            <td>Toggle password visibility</td>
+        </tr>
+    </table>
+    
+    <h4>Use Cases - Login Page</h4>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Steps</th>
+            <th>Expected Result</th>
+            <th>Error Scenarios</th>
+        </tr>
+        <tr>
+            <td>UC-LOGIN-001</td>
+            <td>Successful Login</td>
+            <td>1. Enter valid email 2. Enter correct password 3. Click Sign In</td>
+            <td>Redirect to /dashboard, toast "Welcome back!"</td>
+            <td>N/A</td>
+        </tr>
+        <tr>
+            <td>UC-LOGIN-002</td>
+            <td>Invalid Credentials</td>
+            <td>1. Enter valid email 2. Enter wrong password 3. Click Sign In</td>
+            <td>Toast "Login failed" with destructive variant</td>
+            <td>401 Unauthorized</td>
+        </tr>
+        <tr>
+            <td>UC-LOGIN-003</td>
+            <td>Empty Form Submission</td>
+            <td>1. Leave fields empty 2. Click Sign In</td>
+            <td>HTML5 validation prevents submission</td>
+            <td>Required field validation</td>
+        </tr>
+        <tr>
+            <td>UC-LOGIN-004</td>
+            <td>Navigate to Registration</td>
+            <td>1. Click "Create account" link</td>
+            <td>Redirect to /register</td>
+            <td>N/A</td>
+        </tr>
+    </table>
+    
+    <h3>16.2 Registration Page (/register)</h3>
+    <div class="section-summary">
+        <strong>Purpose:</strong> New user account creation<br>
+        <strong>Route:</strong> /register<br>
+        <strong>Access:</strong> Public (unauthenticated users)
+    </div>
+    
+    <h4>Field Specifications</h4>
+    <table>
+        <tr>
+            <th>Field Name</th>
+            <th>Field Type</th>
+            <th>Required</th>
+            <th>Validation Rules</th>
+            <th>API Mapping</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>Full Name</td>
+            <td>Input (text)</td>
+            <td>Yes</td>
+            <td>Required, max 100 chars</td>
+            <td>username (derived)</td>
+            <td>User's full name</td>
+        </tr>
+        <tr>
+            <td>Email</td>
+            <td>Input (email)</td>
+            <td>Yes</td>
+            <td>Valid email format, unique in system</td>
+            <td>email</td>
+            <td>User's email address</td>
+        </tr>
+        <tr>
+            <td>Password</td>
+            <td>Input (password)</td>
+            <td>Yes</td>
+            <td>Min 8 characters</td>
+            <td>password</td>
+            <td>Account password</td>
+        </tr>
+        <tr>
+            <td>Confirm Password</td>
+            <td>Input (password)</td>
+            <td>Yes</td>
+            <td>Must match Password field</td>
+            <td>N/A (validation only)</td>
+            <td>Password confirmation</td>
+        </tr>
+        <tr>
+            <td>Show Password Toggle</td>
+            <td>Button (icon)</td>
+            <td>No</td>
+            <td>N/A</td>
+            <td>N/A (UI only)</td>
+            <td>Toggle password visibility</td>
+        </tr>
+    </table>
+    
+    <h4>Use Cases - Registration Page</h4>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Steps</th>
+            <th>Expected Result</th>
+            <th>Error Scenarios</th>
+        </tr>
+        <tr>
+            <td>UC-REG-001</td>
+            <td>Successful Registration</td>
+            <td>1. Fill all fields 2. Matching passwords 3. Click Create Account</td>
+            <td>Account created, redirect to /dashboard, toast "Account created!"</td>
+            <td>N/A</td>
+        </tr>
+        <tr>
+            <td>UC-REG-002</td>
+            <td>Password Mismatch</td>
+            <td>1. Enter different passwords 2. Submit</td>
+            <td>Toast "Password mismatch" with destructive variant</td>
+            <td>Client-side validation</td>
+        </tr>
+        <tr>
+            <td>UC-REG-003</td>
+            <td>Duplicate Email</td>
+            <td>1. Enter existing email 2. Submit</td>
+            <td>Toast "Registration failed"</td>
+            <td>409 Conflict</td>
+        </tr>
+        <tr>
+            <td>UC-REG-004</td>
+            <td>Navigate to Login</td>
+            <td>1. Click "Sign in" link</td>
+            <td>Redirect to /login</td>
+            <td>N/A</td>
+        </tr>
+    </table>
+
+    <h3>16.3 User Management - Create User (/user-management/create)</h3>
+    <div class="section-summary">
+        <strong>Purpose:</strong> Admin creates new user accounts<br>
+        <strong>Route:</strong> /user-management/create<br>
+        <strong>Access:</strong> Admin role required
+    </div>
+    
+    <h4>Field Specifications</h4>
+    <table>
+        <tr>
+            <th>Field Name</th>
+            <th>Field Type</th>
+            <th>Required</th>
+            <th>Validation Rules</th>
+            <th>API Mapping</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>Username</td>
+            <td>Input (text)</td>
+            <td>Yes</td>
+            <td>Min 3 chars, max 50 chars, unique</td>
+            <td>username</td>
+            <td>Unique login identifier</td>
+        </tr>
+        <tr>
+            <td>Email</td>
+            <td>Input (email)</td>
+            <td>Yes</td>
+            <td>Valid email format, unique</td>
+            <td>email</td>
+            <td>User's email address</td>
+        </tr>
+        <tr>
+            <td>First Name</td>
+            <td>Input (text)</td>
+            <td>Yes</td>
+            <td>Min 1 char, max 50 chars</td>
+            <td>firstName</td>
+            <td>User's first name</td>
+        </tr>
+        <tr>
+            <td>Last Name</td>
+            <td>Input (text)</td>
+            <td>Yes</td>
+            <td>Min 1 char, max 50 chars</td>
+            <td>lastName</td>
+            <td>User's last name</td>
+        </tr>
+        <tr>
+            <td>Password</td>
+            <td>Input (password)</td>
+            <td>Yes</td>
+            <td>Min 8 characters</td>
+            <td>password</td>
+            <td>Initial account password</td>
+        </tr>
+        <tr>
+            <td>Confirm Password</td>
+            <td>Input (password)</td>
+            <td>Yes</td>
+            <td>Must match Password field</td>
+            <td>N/A (validation only)</td>
+            <td>Password confirmation</td>
+        </tr>
+        <tr>
+            <td>Role</td>
+            <td>Select (dropdown)</td>
+            <td>Yes</td>
+            <td>Must select one: Admin, User, Viewer</td>
+            <td>role</td>
+            <td>User's access role</td>
+        </tr>
+    </table>
+    
+    <h4>Role Options</h4>
+    <table>
+        <tr>
+            <th>Value</th>
+            <th>Display Label</th>
+            <th>Permissions</th>
+        </tr>
+        <tr>
+            <td>admin</td>
+            <td>Admin</td>
+            <td>Full system access, user management, CA management, all operations</td>
+        </tr>
+        <tr>
+            <td>user</td>
+            <td>User</td>
+            <td>View/manage own certificates, request certificates, view reports</td>
+        </tr>
+        <tr>
+            <td>viewer</td>
+            <td>Viewer</td>
+            <td>Read-only access to certificates and reports</td>
+        </tr>
+    </table>
+    
+    <h4>Use Cases - Create User Page</h4>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Steps</th>
+            <th>Expected Result</th>
+            <th>Error Scenarios</th>
+        </tr>
+        <tr>
+            <td>UC-CUSR-001</td>
+            <td>Create Admin User</td>
+            <td>1. Fill all fields 2. Select Admin role 3. Submit</td>
+            <td>User created, toast success, redirect to /user-management/manage</td>
+            <td>N/A</td>
+        </tr>
+        <tr>
+            <td>UC-CUSR-002</td>
+            <td>Create Standard User</td>
+            <td>1. Fill all fields 2. Select User role 3. Submit</td>
+            <td>User created, toast success, redirect to /user-management/manage</td>
+            <td>N/A</td>
+        </tr>
+        <tr>
+            <td>UC-CUSR-003</td>
+            <td>Duplicate Username</td>
+            <td>1. Enter existing username 2. Submit</td>
+            <td>Error "Username already exists"</td>
+            <td>409 Conflict</td>
+        </tr>
+        <tr>
+            <td>UC-CUSR-004</td>
+            <td>Password Mismatch</td>
+            <td>1. Enter different passwords 2. Submit</td>
+            <td>Validation error "Passwords don't match"</td>
+            <td>Client-side validation</td>
+        </tr>
+        <tr>
+            <td>UC-CUSR-005</td>
+            <td>Cancel Creation</td>
+            <td>1. Click Cancel button</td>
+            <td>Navigate back to previous page</td>
+            <td>N/A</td>
+        </tr>
+    </table>
+
+    <h3>16.4 User Management - Manage Users (/user-management/manage)</h3>
+    <div class="section-summary">
+        <strong>Purpose:</strong> View, edit, and delete users<br>
+        <strong>Route:</strong> /user-management/manage<br>
+        <strong>Access:</strong> Admin role required
+    </div>
+    
+    <h4>Table Columns</h4>
+    <table>
+        <tr>
+            <th>Column</th>
+            <th>Field Mapping</th>
+            <th>Sortable</th>
+            <th>Filterable</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>Username</td>
+            <td>username</td>
+            <td>Yes</td>
+            <td>Yes (search)</td>
+            <td>User's login identifier</td>
+        </tr>
+        <tr>
+            <td>Email</td>
+            <td>email</td>
+            <td>Yes</td>
+            <td>Yes (search)</td>
+            <td>User's email address</td>
+        </tr>
+        <tr>
+            <td>First Name</td>
+            <td>firstName</td>
+            <td>Yes</td>
+            <td>No</td>
+            <td>User's first name</td>
+        </tr>
+        <tr>
+            <td>Last Name</td>
+            <td>lastName</td>
+            <td>Yes</td>
+            <td>No</td>
+            <td>User's last name</td>
+        </tr>
+        <tr>
+            <td>Role</td>
+            <td>role</td>
+            <td>Yes</td>
+            <td>Yes (filter)</td>
+            <td>Badge: Admin (default), User (secondary), Viewer (outline)</td>
+        </tr>
+        <tr>
+            <td>Status</td>
+            <td>status</td>
+            <td>Yes</td>
+            <td>Yes (filter)</td>
+            <td>Badge: Active (default), Inactive (secondary)</td>
+        </tr>
+        <tr>
+            <td>Actions</td>
+            <td>N/A</td>
+            <td>No</td>
+            <td>No</td>
+            <td>Edit (icon), Delete (icon)</td>
+        </tr>
+    </table>
+    
+    <h4>Use Cases - Manage Users Page</h4>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Steps</th>
+            <th>Expected Result</th>
+            <th>Error Scenarios</th>
+        </tr>
+        <tr>
+            <td>UC-MUSR-001</td>
+            <td>View All Users</td>
+            <td>1. Navigate to /user-management/manage</td>
+            <td>Table displays all users with pagination</td>
+            <td>N/A</td>
+        </tr>
+        <tr>
+            <td>UC-MUSR-002</td>
+            <td>Search Users</td>
+            <td>1. Enter text in search box 2. Results filter</td>
+            <td>Table shows matching users by username/email/name</td>
+            <td>N/A</td>
+        </tr>
+        <tr>
+            <td>UC-MUSR-003</td>
+            <td>Edit User</td>
+            <td>1. Click Edit icon on user row</td>
+            <td>Edit dialog/page opens with user data</td>
+            <td>N/A</td>
+        </tr>
+        <tr>
+            <td>UC-MUSR-004</td>
+            <td>Delete User</td>
+            <td>1. Click Delete icon 2. Confirm deletion</td>
+            <td>User removed, toast "User deleted"</td>
+            <td>Cannot delete self</td>
+        </tr>
+        <tr>
+            <td>UC-MUSR-005</td>
+            <td>Add New User</td>
+            <td>1. Click "Add User" button</td>
+            <td>Navigate to /user-management/create</td>
+            <td>N/A</td>
+        </tr>
+    </table>
+
+    <h3>16.5 Issue Certificate (/issue-certificate)</h3>
+    <div class="section-summary">
+        <strong>Purpose:</strong> Raise and manage certificate requests<br>
+        <strong>Route:</strong> /issue-certificate<br>
+        <strong>Access:</strong> Admin, CA Manager
+    </div>
+    
+    <h4>Certificate Request Form - Field Specifications</h4>
+    <table>
+        <tr>
+            <th>Field Name</th>
+            <th>Field Type</th>
+            <th>Required</th>
+            <th>Validation Rules</th>
+            <th>API Mapping</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>Request Type (CSR Type)</td>
+            <td>Radio Group</td>
+            <td>Yes</td>
+            <td>Must select: with-csr or without-csr</td>
+            <td>csrType</td>
+            <td>Whether request includes CSR or generates new key pair</td>
+        </tr>
+        <tr>
+            <td>CSR Content</td>
+            <td>Textarea</td>
+            <td>Conditional (if with-csr)</td>
+            <td>Valid PEM format CSR, required if csrType=with-csr</td>
+            <td>csrContent</td>
+            <td>Certificate Signing Request content</td>
+        </tr>
+        <tr>
+            <td>Purpose</td>
+            <td>Select (dropdown)</td>
+            <td>Yes</td>
+            <td>Must select one option</td>
+            <td>purpose</td>
+            <td>Certificate usage purpose</td>
+        </tr>
+        <tr>
+            <td>Common Name</td>
+            <td>Input (text)</td>
+            <td>Yes</td>
+            <td>Min 1 char, max 100 chars</td>
+            <td>commonName</td>
+            <td>Domain name or entity name (e.g., www.example.com)</td>
+        </tr>
+        <tr>
+            <td>Organization</td>
+            <td>Input (text)</td>
+            <td>Yes</td>
+            <td>Min 1 char, max 100 chars</td>
+            <td>organization</td>
+            <td>Organization name</td>
+        </tr>
+        <tr>
+            <td>Organizational Unit</td>
+            <td>Input (text)</td>
+            <td>No</td>
+            <td>Max 100 chars</td>
+            <td>organizationalUnit</td>
+            <td>Department or division (e.g., IT Department)</td>
+        </tr>
+        <tr>
+            <td>Locality</td>
+            <td>Input (text)</td>
+            <td>No</td>
+            <td>Max 100 chars</td>
+            <td>locality</td>
+            <td>City (e.g., San Francisco)</td>
+        </tr>
+        <tr>
+            <td>State</td>
+            <td>Input (text)</td>
+            <td>No</td>
+            <td>Max 100 chars</td>
+            <td>state</td>
+            <td>State or province (e.g., California)</td>
+        </tr>
+        <tr>
+            <td>Country Code</td>
+            <td>Input (text)</td>
+            <td>Yes</td>
+            <td>Exactly 2 characters (ISO 3166-1)</td>
+            <td>country</td>
+            <td>Two-letter country code (e.g., US, IN)</td>
+        </tr>
+        <tr>
+            <td>Key Pair Algorithm</td>
+            <td>Select (dropdown)</td>
+            <td>Yes</td>
+            <td>Must select one option</td>
+            <td>keyPairAlgorithm</td>
+            <td>Cryptographic algorithm for key generation</td>
+        </tr>
+        <tr>
+            <td>Validity (Days)</td>
+            <td>Input (number)</td>
+            <td>Yes</td>
+            <td>Min 1, Max 36500 (100 years)</td>
+            <td>validityInDays</td>
+            <td>Certificate validity period</td>
+        </tr>
+        <tr>
+            <td>Alias</td>
+            <td>Input (text)</td>
+            <td>Yes</td>
+            <td>Min 1 char, max 50 chars, regex: ^[a-z0-9-]+$</td>
+            <td>alias</td>
+            <td>Unique certificate identifier (lowercase, numbers, hyphens)</td>
+        </tr>
+        <tr>
+            <td>CA Alias</td>
+            <td>Select (dropdown)</td>
+            <td>Yes</td>
+            <td>Must select available CA</td>
+            <td>caAlias</td>
+            <td>Certificate Authority to sign the certificate</td>
+        </tr>
+        <tr>
+            <td>Password Protection</td>
+            <td>Input (password)</td>
+            <td>Yes</td>
+            <td>Min 1 char, max 100 chars</td>
+            <td>passwordProtection</td>
+            <td>Password to protect private key</td>
+        </tr>
+    </table>
+    
+    <h4>Purpose Options</h4>
+    <table>
+        <tr>
+            <th>Value</th>
+            <th>Display Label</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>web-server</td>
+            <td>Web Server (TLS/SSL)</td>
+            <td>HTTPS/SSL certificates for web servers</td>
+        </tr>
+        <tr>
+            <td>client-auth</td>
+            <td>Client Authentication</td>
+            <td>mTLS client certificates</td>
+        </tr>
+        <tr>
+            <td>code-signing</td>
+            <td>Code Signing</td>
+            <td>Sign software and code</td>
+        </tr>
+        <tr>
+            <td>email</td>
+            <td>Email (S/MIME)</td>
+            <td>Email encryption and signing</td>
+        </tr>
+        <tr>
+            <td>vpn</td>
+            <td>VPN</td>
+            <td>VPN authentication</td>
+        </tr>
+        <tr>
+            <td>iot</td>
+            <td>IoT Device</td>
+            <td>IoT device identity</td>
+        </tr>
+        <tr>
+            <td>api</td>
+            <td>API Authentication</td>
+            <td>API server/client certificates</td>
+        </tr>
+        <tr>
+            <td>other</td>
+            <td>Other</td>
+            <td>Custom purpose</td>
+        </tr>
+    </table>
+    
+    <h4>Key Pair Algorithm Options</h4>
+    <table>
+        <tr>
+            <th>Value</th>
+            <th>Display Label</th>
+            <th>Key Size</th>
+            <th>Recommended For</th>
+        </tr>
+        <tr>
+            <td>RSA2048</td>
+            <td>RSA 2048</td>
+            <td>2048 bits</td>
+            <td>Standard security, wide compatibility</td>
+        </tr>
+        <tr>
+            <td>RSA3072</td>
+            <td>RSA 3072</td>
+            <td>3072 bits</td>
+            <td>Enhanced security</td>
+        </tr>
+        <tr>
+            <td>RSA4096</td>
+            <td>RSA 4096</td>
+            <td>4096 bits</td>
+            <td>High security, CA certificates</td>
+        </tr>
+        <tr>
+            <td>ECDSA_P256</td>
+            <td>ECDSA P256</td>
+            <td>256 bits</td>
+            <td>Modern, efficient, IoT devices</td>
+        </tr>
+        <tr>
+            <td>ECDSA_P384</td>
+            <td>ECDSA P384</td>
+            <td>384 bits</td>
+            <td>High security elliptic curve</td>
+        </tr>
+    </table>
+    
+    <h4>Available CA Options</h4>
+    <table>
+        <tr>
+            <th>Value</th>
+            <th>Display Label</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>root-ca</td>
+            <td>My Root CA (root-ca)</td>
+            <td>Root Certificate Authority</td>
+        </tr>
+        <tr>
+            <td>intermediate-ca</td>
+            <td>Intermediate CA (intermediate-ca)</td>
+            <td>Intermediate CA for issuing end-entity certificates</td>
+        </tr>
+    </table>
+    
+    <h4>Certificate Request Table Columns</h4>
+    <table>
+        <tr>
+            <th>Column</th>
+            <th>Field Mapping</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>Common Name</td>
+            <td>commonName</td>
+            <td>Certificate subject with CSR icon indicator</td>
+        </tr>
+        <tr>
+            <td>Organization</td>
+            <td>organization</td>
+            <td>Organization name</td>
+        </tr>
+        <tr>
+            <td>Purpose</td>
+            <td>purpose</td>
+            <td>Badge with purpose label</td>
+        </tr>
+        <tr>
+            <td>CSR Type</td>
+            <td>csrType</td>
+            <td>Badge: "With CSR" (default) or "Without CSR" (secondary)</td>
+        </tr>
+        <tr>
+            <td>Algorithm</td>
+            <td>keyPairAlgorithm</td>
+            <td>Key pair algorithm used</td>
+        </tr>
+        <tr>
+            <td>Validity</td>
+            <td>validityInDays</td>
+            <td>Validity period in days</td>
+        </tr>
+        <tr>
+            <td>Status</td>
+            <td>status</td>
+            <td>Pending (secondary), Issued (green), Rejected (destructive)</td>
+        </tr>
+        <tr>
+            <td>Created</td>
+            <td>createdAt</td>
+            <td>Request creation date</td>
+        </tr>
+        <tr>
+            <td>Actions</td>
+            <td>N/A</td>
+            <td>Issue (if pending), Download (if approved), Delete</td>
+        </tr>
+    </table>
+    
+    <h4>Use Cases - Issue Certificate Page</h4>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Steps</th>
+            <th>Expected Result</th>
+            <th>Error Scenarios</th>
+        </tr>
+        <tr>
+            <td>UC-ICERT-001</td>
+            <td>Raise Request Without CSR</td>
+            <td>1. Click "Raise Request" 2. Select "Without CSR" 3. Fill all required fields 4. Submit</td>
+            <td>Request added to table with "Pending" status, toast success</td>
+            <td>Validation errors shown inline</td>
+        </tr>
+        <tr>
+            <td>UC-ICERT-002</td>
+            <td>Raise Request With CSR</td>
+            <td>1. Click "Raise Request" 2. Select "With CSR" 3. Paste CSR content 4. Fill fields 5. Submit</td>
+            <td>Request added to table, CSR parsed for details</td>
+            <td>Invalid CSR format error</td>
+        </tr>
+        <tr>
+            <td>UC-ICERT-003</td>
+            <td>Issue Certificate</td>
+            <td>1. Find pending request 2. Click Issue (checkmark) icon</td>
+            <td>Status changes to "Issued", download available</td>
+            <td>CA unavailable, signing failed</td>
+        </tr>
+        <tr>
+            <td>UC-ICERT-004</td>
+            <td>Download Certificate</td>
+            <td>1. Find issued certificate 2. Click Download icon</td>
+            <td>PEM file downloaded with certificate alias as filename</td>
+            <td>N/A</td>
+        </tr>
+        <tr>
+            <td>UC-ICERT-005</td>
+            <td>Delete Request</td>
+            <td>1. Click Delete (trash) icon on any request</td>
+            <td>Request removed from table, toast "Request Deleted"</td>
+            <td>N/A</td>
+        </tr>
+        <tr>
+            <td>UC-ICERT-006</td>
+            <td>Search Requests</td>
+            <td>1. Type in search box</td>
+            <td>Table filters by common name, alias, or organization</td>
+            <td>N/A</td>
+        </tr>
+        <tr>
+            <td>UC-ICERT-007</td>
+            <td>Invalid Alias Format</td>
+            <td>1. Enter alias with uppercase or special chars 2. Submit</td>
+            <td>Validation error "Only lowercase letters, numbers, and hyphens"</td>
+            <td>Client-side validation</td>
+        </tr>
+        <tr>
+            <td>UC-ICERT-008</td>
+            <td>Missing CSR Content</td>
+            <td>1. Select "With CSR" 2. Leave CSR empty 3. Submit</td>
+            <td>Validation error "CSR content is required when using CSR"</td>
+            <td>Client-side validation</td>
+        </tr>
+    </table>
+
+    <h3>16.6 Dashboard (/dashboard)</h3>
+    <div class="section-summary">
+        <strong>Purpose:</strong> Main dashboard with certificate metrics and tenant info<br>
+        <strong>Route:</strong> /dashboard<br>
+        <strong>Access:</strong> All authenticated users
+    </div>
+    
+    <h4>Dashboard Metrics Display</h4>
+    <table>
+        <tr>
+            <th>Metric</th>
+            <th>API Source</th>
+            <th>Display Format</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>Total Certificates</td>
+            <td>/api/dashboard/metrics</td>
+            <td>Number</td>
+            <td>Total certificates in system</td>
+        </tr>
+        <tr>
+            <td>Active Certificates</td>
+            <td>/api/dashboard/metrics</td>
+            <td>Number</td>
+            <td>Currently valid certificates</td>
+        </tr>
+        <tr>
+            <td>Expiring Soon</td>
+            <td>/api/dashboard/metrics</td>
+            <td>Number with severity</td>
+            <td>Certificates expiring within threshold</td>
+        </tr>
+        <tr>
+            <td>Expired</td>
+            <td>/api/dashboard/metrics</td>
+            <td>Number</td>
+            <td>Already expired certificates</td>
+        </tr>
+        <tr>
+            <td>Health Score</td>
+            <td>/api/dashboard/certificate-health</td>
+            <td>0-100 score</td>
+            <td>Overall certificate health</td>
+        </tr>
+        <tr>
+            <td>Compliance Score</td>
+            <td>/api/dashboard/compliance-score</td>
+            <td>Percentage</td>
+            <td>PCI-DSS, SOC2, GDPR compliance</td>
+        </tr>
+    </table>
+    
+    <h4>Use Cases - Dashboard Page</h4>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Steps</th>
+            <th>Expected Result</th>
+        </tr>
+        <tr>
+            <td>UC-DASH-001</td>
+            <td>View Certificate Overview</td>
+            <td>1. Navigate to /dashboard</td>
+            <td>All metrics cards displayed with current values</td>
+        </tr>
+        <tr>
+            <td>UC-DASH-002</td>
+            <td>View Expiring Certificates List</td>
+            <td>1. Click on "Expiring Soon" card</td>
+            <td>List of certificates with expiry dates and severity</td>
+        </tr>
+        <tr>
+            <td>UC-DASH-003</td>
+            <td>View Active Tenant</td>
+            <td>1. Check header tenant dropdown</td>
+            <td>Current tenant name, domain, and plan displayed</td>
+        </tr>
+        <tr>
+            <td>UC-DASH-004</td>
+            <td>Switch Tenant</td>
+            <td>1. Click tenant dropdown 2. Select different tenant</td>
+            <td>Dashboard refreshes with new tenant's data</td>
+        </tr>
+    </table>
+
+    <h3>16.7 CA Management (/ca-management)</h3>
+    <div class="section-summary">
+        <strong>Purpose:</strong> Create and manage Certificate Authorities<br>
+        <strong>Route:</strong> /ca-management<br>
+        <strong>Access:</strong> Admin role required
+    </div>
+    
+    <h4>Create CA Form - Field Specifications</h4>
+    <table>
+        <tr>
+            <th>Field Name</th>
+            <th>Field Type</th>
+            <th>Required</th>
+            <th>Validation Rules</th>
+            <th>API Mapping</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>CA Alias</td>
+            <td>Input (text)</td>
+            <td>Yes</td>
+            <td>Unique, lowercase, alphanumeric with hyphens</td>
+            <td>alias</td>
+            <td>Unique CA identifier</td>
+        </tr>
+        <tr>
+            <td>Common Name</td>
+            <td>Input (text)</td>
+            <td>Yes</td>
+            <td>Min 1, max 100 chars</td>
+            <td>commonName</td>
+            <td>CA common name (e.g., "Corporate Root CA")</td>
+        </tr>
+        <tr>
+            <td>Organization</td>
+            <td>Input (text)</td>
+            <td>Yes</td>
+            <td>Min 1, max 100 chars</td>
+            <td>organization</td>
+            <td>Organization name</td>
+        </tr>
+        <tr>
+            <td>Country Code</td>
+            <td>Input (text)</td>
+            <td>Yes</td>
+            <td>Exactly 2 characters</td>
+            <td>country</td>
+            <td>Two-letter country code</td>
+        </tr>
+        <tr>
+            <td>Validity (Days)</td>
+            <td>Input (number)</td>
+            <td>Yes</td>
+            <td>Min 1, recommended 3650 (10 years)</td>
+            <td>validityDays</td>
+            <td>CA certificate validity period</td>
+        </tr>
+        <tr>
+            <td>Key Algorithm</td>
+            <td>Select (dropdown)</td>
+            <td>Yes</td>
+            <td>RSA4096 recommended for CA</td>
+            <td>keyAlgorithm</td>
+            <td>Key pair algorithm for CA</td>
+        </tr>
+    </table>
+
+    <h3>16.8 Tenant Configuration (Settings → Tenant)</h3>
+    <div class="section-summary">
+        <strong>Purpose:</strong> Configure tenant-specific settings<br>
+        <strong>Route:</strong> /settings (Tenant tab)<br>
+        <strong>Access:</strong> Admin role required
+    </div>
+    
+    <h4>Tenant Settings Fields</h4>
+    <table>
+        <tr>
+            <th>Field Name</th>
+            <th>Field Type</th>
+            <th>Editable</th>
+            <th>Validation Rules</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>Tenant Name</td>
+            <td>Input (text)</td>
+            <td>Yes</td>
+            <td>Min 1, max 100 chars</td>
+            <td>Display name for the tenant</td>
+        </tr>
+        <tr>
+            <td>Tenant ID</td>
+            <td>Input (text)</td>
+            <td>No (read-only)</td>
+            <td>N/A</td>
+            <td>Unique system identifier</td>
+        </tr>
+        <tr>
+            <td>Domain</td>
+            <td>Input (text)</td>
+            <td>Yes</td>
+            <td>Valid domain format</td>
+            <td>Tenant's primary domain</td>
+        </tr>
+        <tr>
+            <td>Plan</td>
+            <td>Select (dropdown)</td>
+            <td>Yes (Admin only)</td>
+            <td>enterprise, professional, starter</td>
+            <td>Subscription plan level</td>
+        </tr>
+        <tr>
+            <td>Max Certificates</td>
+            <td>Input (number)</td>
+            <td>Yes</td>
+            <td>Min 1</td>
+            <td>Maximum certificates allowed for tenant</td>
+        </tr>
+        <tr>
+            <td>Max Users</td>
+            <td>Input (number)</td>
+            <td>Yes</td>
+            <td>Min 1</td>
+            <td>Maximum users allowed for tenant</td>
+        </tr>
+    </table>
+
+    <!-- API FIELD MAPPING SUMMARY -->
+    <h2>17. API Field Mapping Summary</h2>
+    
+    <h3>17.1 User API Fields (/api/register, /api/users)</h3>
+    <table>
+        <tr>
+            <th>UI Field</th>
+            <th>API Field</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Constraints</th>
+        </tr>
+        <tr>
+            <td>Username</td>
+            <td>username</td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>3-50 chars, unique, alphanumeric</td>
+        </tr>
+        <tr>
+            <td>Email</td>
+            <td>email</td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>Valid email format, unique</td>
+        </tr>
+        <tr>
+            <td>Password</td>
+            <td>password</td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>Min 8 chars, recommended: uppercase, lowercase, number, special</td>
+        </tr>
+        <tr>
+            <td>First Name</td>
+            <td>firstName</td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>1-50 chars</td>
+        </tr>
+        <tr>
+            <td>Last Name</td>
+            <td>lastName</td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>1-50 chars</td>
+        </tr>
+        <tr>
+            <td>Role</td>
+            <td>role</td>
+            <td>string (enum)</td>
+            <td>Yes</td>
+            <td>ROLE_ADMIN, ROLE_USER, ROLE_VIEWER</td>
+        </tr>
+        <tr>
+            <td>Status</td>
+            <td>status</td>
+            <td>string (enum)</td>
+            <td>System</td>
+            <td>active, inactive, suspended</td>
+        </tr>
+    </table>
+    
+    <h3>17.2 Certificate API Fields (/api/certificate/create)</h3>
+    <table>
+        <tr>
+            <th>UI Field</th>
+            <th>API Field</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Constraints</th>
+        </tr>
+        <tr>
+            <td>Common Name</td>
+            <td>commonName</td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>1-100 chars, typically FQDN</td>
+        </tr>
+        <tr>
+            <td>Organization</td>
+            <td>organization</td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>1-100 chars</td>
+        </tr>
+        <tr>
+            <td>Organizational Unit</td>
+            <td>organizationalUnit</td>
+            <td>string</td>
+            <td>No</td>
+            <td>0-100 chars</td>
+        </tr>
+        <tr>
+            <td>Locality</td>
+            <td>locality</td>
+            <td>string</td>
+            <td>No</td>
+            <td>0-100 chars</td>
+        </tr>
+        <tr>
+            <td>State</td>
+            <td>state</td>
+            <td>string</td>
+            <td>No</td>
+            <td>0-100 chars</td>
+        </tr>
+        <tr>
+            <td>Country Code</td>
+            <td>country</td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>Exactly 2 chars (ISO 3166-1 alpha-2)</td>
+        </tr>
+        <tr>
+            <td>Alias</td>
+            <td>alias</td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>1-50 chars, lowercase, alphanumeric, hyphens only</td>
+        </tr>
+        <tr>
+            <td>CA Alias</td>
+            <td>caAlias</td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>Must reference existing CA</td>
+        </tr>
+        <tr>
+            <td>Key Pair Algorithm</td>
+            <td>keyPairAlgorithm</td>
+            <td>string (enum)</td>
+            <td>Yes</td>
+            <td>RSA2048, RSA3072, RSA4096, ECDSA_P256, ECDSA_P384</td>
+        </tr>
+        <tr>
+            <td>Validity (Days)</td>
+            <td>validityInDays</td>
+            <td>integer</td>
+            <td>Yes</td>
+            <td>1-36500</td>
+        </tr>
+        <tr>
+            <td>Password Protection</td>
+            <td>passwordProtection</td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>1-100 chars, for private key encryption</td>
+        </tr>
+        <tr>
+            <td>CSR Type</td>
+            <td>csrType</td>
+            <td>string (enum)</td>
+            <td>Yes</td>
+            <td>with-csr, without-csr</td>
+        </tr>
+        <tr>
+            <td>CSR Content</td>
+            <td>csrContent</td>
+            <td>string</td>
+            <td>Conditional</td>
+            <td>PEM format, required if csrType=with-csr</td>
+        </tr>
+        <tr>
+            <td>Purpose</td>
+            <td>purpose</td>
+            <td>string (enum)</td>
+            <td>Yes</td>
+            <td>web-server, client-auth, code-signing, email, vpn, iot, api, other</td>
+        </tr>
+    </table>
+    
+    <h3>17.3 Certificate Authority API Fields (/api/ca/create)</h3>
+    <table>
+        <tr>
+            <th>UI Field</th>
+            <th>API Field</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Constraints</th>
+        </tr>
+        <tr>
+            <td>CA Alias</td>
+            <td>alias</td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>Unique, lowercase, alphanumeric with hyphens</td>
+        </tr>
+        <tr>
+            <td>Common Name</td>
+            <td>commonName</td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>1-100 chars</td>
+        </tr>
+        <tr>
+            <td>Organization</td>
+            <td>organization</td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>1-100 chars</td>
+        </tr>
+        <tr>
+            <td>Country Code</td>
+            <td>country</td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>Exactly 2 chars</td>
+        </tr>
+        <tr>
+            <td>Validity (Days)</td>
+            <td>validityDays</td>
+            <td>integer</td>
+            <td>Yes</td>
+            <td>Recommended: 3650-7300 for root CAs</td>
+        </tr>
+        <tr>
+            <td>Key Algorithm</td>
+            <td>keyAlgorithm</td>
+            <td>string (enum)</td>
+            <td>Yes</td>
+            <td>RSA4096 recommended for CAs</td>
+        </tr>
+    </table>
+
+    <h3>17.4 Authentication API Fields (/api/auth/login)</h3>
+    <table>
+        <tr>
+            <th>UI Field</th>
+            <th>API Field</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Response Field</th>
+        </tr>
+        <tr>
+            <td>Email/Username</td>
+            <td>username</td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>N/A</td>
+        </tr>
+        <tr>
+            <td>Password</td>
+            <td>password</td>
+            <td>string</td>
+            <td>Yes</td>
+            <td>N/A</td>
+        </tr>
+        <tr>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>Response</td>
+            <td>token (JWT), refreshToken, expiresIn</td>
+        </tr>
+    </table>
+
+    <!-- TEST EXECUTION TRACKING UPDATE -->
+    <h2>18. Updated Execution Summary</h2>
+    <table>
+        <tr>
+            <th>Section</th>
+            <th>Total Tests</th>
+            <th class="status-pass">Pass</th>
+            <th class="status-fail">Fail</th>
+            <th class="status-pending">Pending</th>
+            <th>Coverage</th>
+        </tr>
+        <tr>
+            <td>1. Authentication & Security</td>
+            <td>10</td>
+            <td class="status-pass">2</td>
+            <td class="status-fail">0</td>
+            <td class="status-pending">8</td>
+            <td>20%</td>
+        </tr>
+        <tr>
+            <td>2. Certificate Management</td>
+            <td>15</td>
+            <td class="status-pass">1</td>
+            <td class="status-fail">0</td>
+            <td class="status-pending">14</td>
+            <td>7%</td>
+        </tr>
+        <tr>
+            <td>16. Webpage UI Use Cases</td>
+            <td>35</td>
+            <td class="status-pass">0</td>
+            <td class="status-fail">0</td>
+            <td class="status-pending">35</td>
+            <td>0%</td>
+        </tr>
+        <tr>
+            <td>17. API Field Mapping</td>
+            <td>N/A</td>
+            <td colspan="4">Documentation only - No executable tests</td>
+        </tr>
+        <tr style="background: #e5e7eb; font-weight: bold;">
+            <td>TOTAL (All Sections)</td>
+            <td>142+</td>
+            <td class="status-pass">12</td>
+            <td class="status-fail">3</td>
+            <td class="status-pending">127+</td>
+            <td>8%</td>
+        </tr>
+    </table>
+
     <div class="section-summary">
         <strong>Document Generated:</strong> January 3, 2026<br>
         <strong>Author:</strong> CertAxis Test Team<br>
-        <strong>Version:</strong> 1.0<br>
-        <strong>Next Review:</strong> After bug fixes are deployed
+        <strong>Version:</strong> 2.0 (with Webpage Use Cases & Field Specifications)<br>
+        <strong>New Sections Added:</strong> 16. Webpage Use Cases, 17. API Field Mapping, 18. Updated Summary<br>
+        <strong>Next Review:</strong> After UI integration testing
     </div>
 </body>
 </html>
