@@ -15,19 +15,27 @@ interface AuthContextType {
   logout: () => void;
 }
 
-// TEMPORARY: Mock user for development - bypasses authentication
-const MOCK_USER: User = {
-  id: "1",
-  username: "admin",
-  name: "Admin User",
-};
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // TEMPORARY: Start with mock user to bypass login
-  const [user, setUser] = useState<User | null>(MOCK_USER);
-  const [isLoading, setIsLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Check for existing session on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    const storedToken = localStorage.getItem("certaxis_token");
+    
+    if (storedUser && storedToken) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        localStorage.removeItem("user");
+        localStorage.removeItem("certaxis_token");
+      }
+    }
+    setIsLoading(false);
+  }, []);
 
   const login = async (username: string, password: string) => {
     try {
