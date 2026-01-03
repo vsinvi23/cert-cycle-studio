@@ -1,0 +1,2464 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>CertAxis - Business Use Cases & Test Cases</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #1a365d; border-bottom: 2px solid #2563eb; padding-bottom: 10px; }
+        h2 { color: #1e40af; background: #eff6ff; padding: 10px; margin-top: 30px; }
+        h3 { color: #1d4ed8; margin-top: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 30px; }
+        th { background: #1e40af; color: white; padding: 12px 8px; text-align: left; font-weight: bold; }
+        td { border: 1px solid #d1d5db; padding: 8px; vertical-align: top; }
+        tr:nth-child(even) { background: #f9fafb; }
+        tr:hover { background: #eff6ff; }
+        .priority-high { background: #fee2e2; color: #991b1b; font-weight: bold; }
+        .priority-medium { background: #fef3c7; color: #92400e; }
+        .priority-low { background: #d1fae5; color: #065f46; }
+        .status-pass { background: #d1fae5; color: #065f46; }
+        .status-fail { background: #fee2e2; color: #991b1b; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .section-summary { background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .instructions { background: #fefce8; padding: 15px; border-left: 4px solid #facc15; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>CertAxis - Certificate Lifecycle Management Platform</h1>
+    <h2>Business Use Cases & Test Cases Document</h2>
+    
+    <div class="instructions">
+        <strong>📋 Instructions:</strong> To convert to Excel, select all content (Ctrl+A), copy (Ctrl+C), and paste into Excel (Ctrl+V). 
+        Alternatively, open this file in Excel directly via File → Open.
+    </div>
+
+    <div class="section-summary">
+        <strong>Document Summary:</strong><br>
+        <strong>Total Sections:</strong> 15<br>
+        <strong>Total API Endpoints:</strong> 95+<br>
+        <strong>Total Test Cases:</strong> 180+<br>
+        <strong>Generated:</strong> January 3, 2026<br>
+        <strong>Base URL:</strong> http://localhost:8080<br>
+        <strong>Demo Credentials:</strong> admin / demo123
+    </div>
+
+    <!-- SECTION 1: AUTHENTICATION & SECURITY -->
+    <h2>1. Authentication & Security</h2>
+    <h3>Business Use Cases</h3>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Description</th>
+            <th>Actors</th>
+            <th>Pre-conditions</th>
+            <th>Post-conditions</th>
+            <th>Priority</th>
+        </tr>
+        <tr>
+            <td>UC-AUTH-001</td>
+            <td>User Login</td>
+            <td>User authenticates with username/password to access the system</td>
+            <td>Admin, User</td>
+            <td>User account exists in system</td>
+            <td>JWT token issued, session created</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-AUTH-002</td>
+            <td>User Registration</td>
+            <td>New user creates an account in the system</td>
+            <td>New User</td>
+            <td>Registration enabled, unique username/email</td>
+            <td>Account created, can login</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-AUTH-003</td>
+            <td>Session Management</td>
+            <td>User views and manages active sessions across devices</td>
+            <td>Admin, User</td>
+            <td>User is authenticated</td>
+            <td>Sessions listed, can terminate</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+        <tr>
+            <td>UC-AUTH-004</td>
+            <td>Terminate Session</td>
+            <td>User terminates a specific session (logout from device)</td>
+            <td>Admin, User</td>
+            <td>Active session exists</td>
+            <td>Session invalidated</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+        <tr>
+            <td>UC-AUTH-005</td>
+            <td>Terminate All Sessions</td>
+            <td>User logs out from all devices except current</td>
+            <td>Admin, User</td>
+            <td>Multiple active sessions</td>
+            <td>All other sessions terminated</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+    </table>
+
+    <h3>Test Cases - Authentication & Security</h3>
+    <table>
+        <tr>
+            <th>TC ID</th>
+            <th>Test Case Name</th>
+            <th>API Endpoint</th>
+            <th>Method</th>
+            <th>Test Steps</th>
+            <th>Test Data</th>
+            <th>Expected Result</th>
+            <th>Priority</th>
+            <th>Status</th>
+        </tr>
+        <tr>
+            <td>TC-AUTH-001</td>
+            <td>Valid Login</td>
+            <td>/api/auth/login</td>
+            <td>POST</td>
+            <td>1. Send login request with valid credentials</td>
+            <td>{"username":"admin","password":"demo123"}</td>
+            <td>200 OK, JWT token returned</td>
+            <td class="priority-high">High</td>
+            <td class="status-pass">PASS</td>
+        </tr>
+        <tr>
+            <td>TC-AUTH-002</td>
+            <td>Invalid Login - Wrong Password</td>
+            <td>/api/auth/login</td>
+            <td>POST</td>
+            <td>1. Send login request with wrong password</td>
+            <td>{"username":"admin","password":"wrongpass"}</td>
+            <td>401 Unauthorized</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-AUTH-003</td>
+            <td>Invalid Login - Non-existent User</td>
+            <td>/api/auth/login</td>
+            <td>POST</td>
+            <td>1. Send login request with non-existent username</td>
+            <td>{"username":"nouser","password":"test123"}</td>
+            <td>401 Unauthorized</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-AUTH-004</td>
+            <td>Valid Registration</td>
+            <td>/api/register</td>
+            <td>POST</td>
+            <td>1. Send registration with valid data</td>
+            <td>{"username":"newuser","email":"newuser@test.com","password":"SecurePass123!","role":"ROLE_USER"}</td>
+            <td>201 Created, User created</td>
+            <td class="priority-high">High</td>
+            <td class="status-pass">PASS</td>
+        </tr>
+        <tr>
+            <td>TC-AUTH-005</td>
+            <td>Registration - Duplicate Username</td>
+            <td>/api/register</td>
+            <td>POST</td>
+            <td>1. Register with existing username</td>
+            <td>{"username":"admin","email":"test@test.com","password":"Test123!"}</td>
+            <td>409 Conflict</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-AUTH-006</td>
+            <td>Get Active Sessions</td>
+            <td>/api/sessions/active</td>
+            <td>GET</td>
+            <td>1. Login 2. Get active sessions</td>
+            <td>Authorization: Bearer {token}</td>
+            <td>200 OK, List of sessions</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-AUTH-007</td>
+            <td>Terminate Specific Session</td>
+            <td>/api/sessions/:sessionId</td>
+            <td>DELETE</td>
+            <td>1. Get sessions 2. Terminate one</td>
+            <td>sessionId: 1</td>
+            <td>200 OK, Session terminated</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-AUTH-008</td>
+            <td>Terminate All Sessions</td>
+            <td>/api/sessions/terminate-all</td>
+            <td>DELETE</td>
+            <td>1. Create multiple sessions 2. Terminate all</td>
+            <td>Authorization: Bearer {token}</td>
+            <td>200 OK, All sessions terminated except current</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-AUTH-009</td>
+            <td>Access Without Token</td>
+            <td>/api/certificates/all</td>
+            <td>GET</td>
+            <td>1. Send request without auth token</td>
+            <td>No Authorization header</td>
+            <td>401 Unauthorized</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-AUTH-010</td>
+            <td>Access With Expired Token</td>
+            <td>/api/certificates/all</td>
+            <td>GET</td>
+            <td>1. Use expired JWT token</td>
+            <td>Expired JWT token</td>
+            <td>401 Unauthorized</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+    </table>
+
+    <!-- SECTION 2: CERTIFICATE MANAGEMENT -->
+    <h2>2. Certificate Management</h2>
+    <h3>Business Use Cases</h3>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Description</th>
+            <th>Actors</th>
+            <th>Pre-conditions</th>
+            <th>Post-conditions</th>
+            <th>Priority</th>
+        </tr>
+        <tr>
+            <td>UC-CERT-001</td>
+            <td>List All Certificates</td>
+            <td>View all certificates with pagination and filtering</td>
+            <td>Admin, Cert Manager</td>
+            <td>User authenticated, has view permission</td>
+            <td>Certificates displayed</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-CERT-002</td>
+            <td>Issue New Certificate</td>
+            <td>Create and issue a new SSL/TLS certificate</td>
+            <td>Admin, Cert Manager</td>
+            <td>CA available, user has issue permission</td>
+            <td>Certificate issued, stored in DB</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-CERT-003</td>
+            <td>Renew Certificate</td>
+            <td>Renew an existing certificate before expiration</td>
+            <td>Admin, Cert Manager</td>
+            <td>Certificate exists, not revoked</td>
+            <td>New certificate issued, old linked</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-CERT-004</td>
+            <td>Revoke Certificate</td>
+            <td>Revoke a certificate with a reason</td>
+            <td>Admin, Security Officer</td>
+            <td>Certificate exists, is active</td>
+            <td>Certificate revoked, audit logged</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-CERT-005</td>
+            <td>View Expiring Certificates</td>
+            <td>View certificates expiring within N days</td>
+            <td>Admin, Cert Manager</td>
+            <td>User authenticated</td>
+            <td>Expiring certificates listed</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-CERT-006</td>
+            <td>Search Certificate by Serial</td>
+            <td>Find certificate by serial number</td>
+            <td>Admin, Auditor</td>
+            <td>Certificate exists</td>
+            <td>Certificate details returned</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+        <tr>
+            <td>UC-CERT-007</td>
+            <td>Delete Certificate</td>
+            <td>Permanently remove a certificate from system</td>
+            <td>Admin</td>
+            <td>Certificate exists, proper authorization</td>
+            <td>Certificate removed, audit logged</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+    </table>
+
+    <h3>Test Cases - Certificate Management</h3>
+    <table>
+        <tr>
+            <th>TC ID</th>
+            <th>Test Case Name</th>
+            <th>API Endpoint</th>
+            <th>Method</th>
+            <th>Test Steps</th>
+            <th>Test Data</th>
+            <th>Expected Result</th>
+            <th>Priority</th>
+            <th>Status</th>
+        </tr>
+        <tr>
+            <td>TC-CERT-001</td>
+            <td>List All Certificates</td>
+            <td>/api/certificates/all</td>
+            <td>GET</td>
+            <td>1. Login 2. Get all certificates</td>
+            <td>page=0, size=20</td>
+            <td>200 OK, Paginated list of certificates</td>
+            <td class="priority-high">High</td>
+            <td class="status-pass">PASS</td>
+        </tr>
+        <tr>
+            <td>TC-CERT-002</td>
+            <td>Get Certificate by ID</td>
+            <td>/api/certificates/:id</td>
+            <td>GET</td>
+            <td>1. Login 2. Get certificate by ID</td>
+            <td>id: 1</td>
+            <td>200 OK, Certificate details</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-CERT-003</td>
+            <td>Get Certificate - Invalid ID</td>
+            <td>/api/certificates/:id</td>
+            <td>GET</td>
+            <td>1. Login 2. Get non-existent certificate</td>
+            <td>id: 99999</td>
+            <td>404 Not Found</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-CERT-004</td>
+            <td>Get Certificates by User</td>
+            <td>/api/certificates/user/:userId</td>
+            <td>GET</td>
+            <td>1. Login 2. Get user's certificates</td>
+            <td>userId: 1</td>
+            <td>200 OK, List of user certificates</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-CERT-005</td>
+            <td>Get Certificate by Serial Number</td>
+            <td>/api/certificates/serial/:serialNumber</td>
+            <td>GET</td>
+            <td>1. Login 2. Search by serial</td>
+            <td>serialNumber: ABC123</td>
+            <td>200 OK, Certificate found</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-CERT-006</td>
+            <td>Get Expired Certificates</td>
+            <td>/api/certificates/expired</td>
+            <td>GET</td>
+            <td>1. Login 2. Get expired certificates</td>
+            <td>-</td>
+            <td>200 OK, List of expired certificates</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-CERT-007</td>
+            <td>Get Expiring Soon - 30 Days</td>
+            <td>/api/certificates/expiring-soon</td>
+            <td>GET</td>
+            <td>1. Login 2. Get expiring in 30 days</td>
+            <td>days=30</td>
+            <td>200 OK, List of expiring certificates</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-CERT-008</td>
+            <td>Issue New Certificate</td>
+            <td>/api/certificates/issue</td>
+            <td>POST</td>
+            <td>1. Login 2. Issue certificate with valid data</td>
+            <td>{"commonName":"www.example.com","organization":"Example Corp","validityDays":365}</td>
+            <td>201 Created, Certificate issued</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-CERT-009</td>
+            <td>Issue Certificate - Invalid Data</td>
+            <td>/api/certificates/issue</td>
+            <td>POST</td>
+            <td>1. Login 2. Issue with missing required fields</td>
+            <td>{"organization":"Test"}</td>
+            <td>400 Bad Request, Validation error</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-CERT-010</td>
+            <td>Update Certificate</td>
+            <td>/api/certificates/:id</td>
+            <td>PUT</td>
+            <td>1. Login 2. Update certificate metadata</td>
+            <td>{"status":"ACTIVE","notes":"Updated"}</td>
+            <td>200 OK, Certificate updated</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-CERT-011</td>
+            <td>Renew Certificate</td>
+            <td>/api/certificates/renew/:certId</td>
+            <td>POST</td>
+            <td>1. Login 2. Renew existing certificate</td>
+            <td>certId: 1</td>
+            <td>200 OK, New certificate issued</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-CERT-012</td>
+            <td>Revoke Certificate - Key Compromise</td>
+            <td>/api/certificates/revoke/:certId</td>
+            <td>POST</td>
+            <td>1. Login 2. Revoke with reason</td>
+            <td>{"reason":"KEY_COMPROMISE"}</td>
+            <td>200 OK, Certificate revoked</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-CERT-013</td>
+            <td>Revoke Already Revoked Certificate</td>
+            <td>/api/certificates/revoke/:certId</td>
+            <td>POST</td>
+            <td>1. Revoke cert 2. Try to revoke again</td>
+            <td>Already revoked certificate ID</td>
+            <td>400 Bad Request</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-CERT-014</td>
+            <td>Delete Certificate</td>
+            <td>/api/certificates/:id</td>
+            <td>DELETE</td>
+            <td>1. Login as Admin 2. Delete certificate</td>
+            <td>id: 10</td>
+            <td>204 No Content</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+    </table>
+
+    <!-- SECTION 3: CERTIFICATE OPERATIONS -->
+    <h2>3. Certificate Operations</h2>
+    <h3>Business Use Cases</h3>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Description</th>
+            <th>Actors</th>
+            <th>Pre-conditions</th>
+            <th>Post-conditions</th>
+            <th>Priority</th>
+        </tr>
+        <tr>
+            <td>UC-OPS-001</td>
+            <td>Validate Certificate</td>
+            <td>Perform X.509 validation including chain verification</td>
+            <td>Admin, Auditor</td>
+            <td>Certificate exists</td>
+            <td>Validation result returned</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-OPS-002</td>
+            <td>Check Revocation Status</td>
+            <td>Check if certificate is revoked via OCSP/CRL</td>
+            <td>Admin, User</td>
+            <td>Certificate exists</td>
+            <td>Revocation status returned</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-OPS-003</td>
+            <td>Compare Certificates</td>
+            <td>Side-by-side comparison of two certificates</td>
+            <td>Admin, Auditor</td>
+            <td>Both certificates exist</td>
+            <td>Comparison result with differences</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+        <tr>
+            <td>UC-OPS-004</td>
+            <td>Detect Duplicates</td>
+            <td>Identify duplicate certificates based on fingerprint</td>
+            <td>Admin</td>
+            <td>Multiple certificates exist</td>
+            <td>Duplicate groups identified</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+        <tr>
+            <td>UC-OPS-005</td>
+            <td>Backup Certificates</td>
+            <td>Create backup of all certificates with metadata</td>
+            <td>Admin</td>
+            <td>Certificates exist</td>
+            <td>Backup file created</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-OPS-006</td>
+            <td>Restore Certificates</td>
+            <td>Restore certificates from backup file</td>
+            <td>Admin</td>
+            <td>Valid backup file exists</td>
+            <td>Certificates restored</td>
+            <td class="priority-high">High</td>
+        </tr>
+    </table>
+
+    <h3>Test Cases - Certificate Operations</h3>
+    <table>
+        <tr>
+            <th>TC ID</th>
+            <th>Test Case Name</th>
+            <th>API Endpoint</th>
+            <th>Method</th>
+            <th>Test Steps</th>
+            <th>Test Data</th>
+            <th>Expected Result</th>
+            <th>Priority</th>
+            <th>Status</th>
+        </tr>
+        <tr>
+            <td>TC-OPS-001</td>
+            <td>Validate Certificate</td>
+            <td>/api/certificate-operations/validate/:id</td>
+            <td>GET</td>
+            <td>1. Login 2. Validate certificate</td>
+            <td>id: 1</td>
+            <td>200 OK, Validation result</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-OPS-002</td>
+            <td>Check Revocation Status</td>
+            <td>/api/certificate-operations/revocation-status/:id</td>
+            <td>GET</td>
+            <td>1. Login 2. Check revocation status</td>
+            <td>id: 1</td>
+            <td>200 OK, {"isRevoked":false}</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-OPS-003</td>
+            <td>Check Revoked Certificate Status</td>
+            <td>/api/certificate-operations/revocation-status/:id</td>
+            <td>GET</td>
+            <td>1. Revoke cert 2. Check status</td>
+            <td>Revoked certificate ID</td>
+            <td>200 OK, {"isRevoked":true,"reason":"..."}</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-OPS-004</td>
+            <td>Compare Two Certificates</td>
+            <td>/api/certificate-operations/compare</td>
+            <td>GET</td>
+            <td>1. Login 2. Compare two certs</td>
+            <td>cert1Id=1&cert2Id=2</td>
+            <td>200 OK, Comparison result</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-OPS-005</td>
+            <td>Detect Duplicate Certificates</td>
+            <td>/api/certificate-operations/detect-duplicates</td>
+            <td>GET</td>
+            <td>1. Login 2. Run duplicate detection</td>
+            <td>-</td>
+            <td>200 OK, Array of duplicate groups</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-OPS-006</td>
+            <td>Backup All Certificates</td>
+            <td>/api/certificate-operations/backup</td>
+            <td>POST</td>
+            <td>1. Login 2. Create backup</td>
+            <td>-</td>
+            <td>200 OK, Backup file path</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-OPS-007</td>
+            <td>Restore from Backup</td>
+            <td>/api/certificate-operations/restore</td>
+            <td>POST</td>
+            <td>1. Login 2. Restore from backup</td>
+            <td>{"backupFile":"backup-2026-01-01.zip"}</td>
+            <td>200 OK, Certificates restored</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+    </table>
+
+    <!-- SECTION 4: CERTIFICATE AUTHORITY (CA) -->
+    <h2>4. Certificate Authority (CA)</h2>
+    <h3>Business Use Cases</h3>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Description</th>
+            <th>Actors</th>
+            <th>Pre-conditions</th>
+            <th>Post-conditions</th>
+            <th>Priority</th>
+        </tr>
+        <tr>
+            <td>UC-CA-001</td>
+            <td>Create Internal CA</td>
+            <td>Create a new internal Certificate Authority</td>
+            <td>Admin</td>
+            <td>No CA with same alias exists</td>
+            <td>CA created, can issue certificates</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-CA-002</td>
+            <td>Import External CA</td>
+            <td>Import an external CA certificate</td>
+            <td>Admin</td>
+            <td>Valid CA certificate PEM</td>
+            <td>CA imported, trusted</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-CA-003</td>
+            <td>List All CAs</td>
+            <td>View all Certificate Authorities</td>
+            <td>Admin, User</td>
+            <td>User authenticated</td>
+            <td>CA list displayed</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-CA-004</td>
+            <td>Revoke CA</td>
+            <td>Revoke a Certificate Authority</td>
+            <td>Admin</td>
+            <td>CA exists, not already revoked</td>
+            <td>CA revoked, issued certs affected</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-CA-005</td>
+            <td>Issue User Certificate</td>
+            <td>Issue a user certificate signed by CA</td>
+            <td>Admin, CA Manager</td>
+            <td>Active CA exists</td>
+            <td>User certificate issued</td>
+            <td class="priority-high">High</td>
+        </tr>
+    </table>
+
+    <h3>Test Cases - Certificate Authority</h3>
+    <table>
+        <tr>
+            <th>TC ID</th>
+            <th>Test Case Name</th>
+            <th>API Endpoint</th>
+            <th>Method</th>
+            <th>Test Steps</th>
+            <th>Test Data</th>
+            <th>Expected Result</th>
+            <th>Priority</th>
+            <th>Status</th>
+        </tr>
+        <tr>
+            <td>TC-CA-001</td>
+            <td>Create Internal CA</td>
+            <td>/api/ca/create</td>
+            <td>POST</td>
+            <td>1. Login as Admin 2. Create CA</td>
+            <td>{"alias":"corporate-ca","commonName":"Corporate Root CA","organization":"Example Corp","country":"US","validityDays":3650}</td>
+            <td>201 Created, CA created</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-CA-002</td>
+            <td>Create CA - Duplicate Alias</td>
+            <td>/api/ca/create</td>
+            <td>POST</td>
+            <td>1. Create CA 2. Create again with same alias</td>
+            <td>Same alias as existing CA</td>
+            <td>409 Conflict</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-CA-003</td>
+            <td>Import External CA</td>
+            <td>/api/ca/import</td>
+            <td>POST</td>
+            <td>1. Login 2. Import CA certificate</td>
+            <td>{"alias":"external-ca","certificatePem":"-----BEGIN CERTIFICATE-----..."}</td>
+            <td>201 Created, CA imported</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-CA-004</td>
+            <td>List All CAs</td>
+            <td>/api/ca</td>
+            <td>GET</td>
+            <td>1. Login 2. Get all CAs</td>
+            <td>page=0, size=20</td>
+            <td>200 OK, List of CAs</td>
+            <td class="priority-high">High</td>
+            <td class="status-pass">PASS</td>
+        </tr>
+        <tr>
+            <td>TC-CA-005</td>
+            <td>Delete CA by Alias</td>
+            <td>/api/ca</td>
+            <td>DELETE</td>
+            <td>1. Login 2. Delete CA by alias</td>
+            <td>alias=corporate-ca</td>
+            <td>204 No Content</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-CA-006</td>
+            <td>Revoke CA</td>
+            <td>/api/ca/revoke</td>
+            <td>POST</td>
+            <td>1. Login 2. Revoke CA</td>
+            <td>{"alias":"corporate-ca","reason":"CA_COMPROMISE"}</td>
+            <td>200 OK, CA revoked</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-CA-007</td>
+            <td>Issue User Certificate</td>
+            <td>/api/certificate/create</td>
+            <td>POST</td>
+            <td>1. Login 2. Issue user cert</td>
+            <td>{"commonName":"John Doe","email":"john@example.com","validityDays":365}</td>
+            <td>201 Created, User cert issued</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+    </table>
+
+    <!-- SECTION 5: DASHBOARD & ANALYTICS -->
+    <h2>5. Dashboard & Analytics</h2>
+    <h3>Business Use Cases</h3>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Description</th>
+            <th>Actors</th>
+            <th>Pre-conditions</th>
+            <th>Post-conditions</th>
+            <th>Priority</th>
+        </tr>
+        <tr>
+            <td>UC-DASH-001</td>
+            <td>View Dashboard Metrics</td>
+            <td>View real-time certificate metrics on dashboard</td>
+            <td>Admin, User</td>
+            <td>User authenticated</td>
+            <td>Metrics displayed</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-DASH-002</td>
+            <td>View Expiring Certificates</td>
+            <td>View certificates expiring within threshold</td>
+            <td>Admin, User</td>
+            <td>User authenticated</td>
+            <td>Expiring certs with severity</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-DASH-003</td>
+            <td>View Certificate Health Score</td>
+            <td>View overall certificate health score (0-100)</td>
+            <td>Admin, User</td>
+            <td>User authenticated</td>
+            <td>Health score displayed</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-DASH-004</td>
+            <td>View Compliance Score</td>
+            <td>View compliance score for PCI-DSS, SOC2, GDPR</td>
+            <td>Admin, Auditor</td>
+            <td>User authenticated</td>
+            <td>Compliance scores displayed</td>
+            <td class="priority-high">High</td>
+        </tr>
+    </table>
+
+    <h3>Test Cases - Dashboard & Analytics</h3>
+    <table>
+        <tr>
+            <th>TC ID</th>
+            <th>Test Case Name</th>
+            <th>API Endpoint</th>
+            <th>Method</th>
+            <th>Test Steps</th>
+            <th>Test Data</th>
+            <th>Expected Result</th>
+            <th>Priority</th>
+            <th>Status</th>
+        </tr>
+        <tr>
+            <td>TC-DASH-001</td>
+            <td>Get Dashboard Metrics</td>
+            <td>/api/dashboard/metrics</td>
+            <td>GET</td>
+            <td>1. Login 2. Get metrics</td>
+            <td>-</td>
+            <td>200 OK, Total/Active/Expiring/Expired counts</td>
+            <td class="priority-high">High</td>
+            <td class="status-pass">PASS</td>
+        </tr>
+        <tr>
+            <td>TC-DASH-002</td>
+            <td>Get Expiring Certificates - 30 Days</td>
+            <td>/api/dashboard/expiring</td>
+            <td>GET</td>
+            <td>1. Login 2. Get expiring in 30 days</td>
+            <td>days=30</td>
+            <td>200 OK, List with severity levels</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-DASH-003</td>
+            <td>Get Expiring Certificates - 7 Days</td>
+            <td>/api/dashboard/expiring</td>
+            <td>GET</td>
+            <td>1. Login 2. Get expiring in 7 days</td>
+            <td>days=7</td>
+            <td>200 OK, Critical severity list</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-DASH-004</td>
+            <td>Get Certificate Health Score</td>
+            <td>/api/dashboard/certificate-health</td>
+            <td>GET</td>
+            <td>1. Login 2. Get health score</td>
+            <td>-</td>
+            <td>200 OK, Health score 0-100</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-DASH-005</td>
+            <td>Get Compliance Score</td>
+            <td>/api/dashboard/compliance-score</td>
+            <td>GET</td>
+            <td>1. Login 2. Get compliance</td>
+            <td>-</td>
+            <td>200 OK, PCI-DSS/SOC2/GDPR scores</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+    </table>
+
+    <!-- SECTION 6: ALERTS & NOTIFICATIONS -->
+    <h2>6. Alerts & Notifications</h2>
+    <h3>Business Use Cases</h3>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Description</th>
+            <th>Actors</th>
+            <th>Pre-conditions</th>
+            <th>Post-conditions</th>
+            <th>Priority</th>
+        </tr>
+        <tr>
+            <td>UC-ALERT-001</td>
+            <td>Configure Alert Rules</td>
+            <td>Set up alert rules for certificate events</td>
+            <td>Admin</td>
+            <td>User authenticated as admin</td>
+            <td>Alert rule created/updated</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-ALERT-002</td>
+            <td>View Alert History</td>
+            <td>View history of triggered alerts</td>
+            <td>Admin, User</td>
+            <td>User authenticated</td>
+            <td>Alert history displayed</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+        <tr>
+            <td>UC-ALERT-003</td>
+            <td>Register Webhook</td>
+            <td>Register webhook for real-time notifications</td>
+            <td>Admin</td>
+            <td>Valid webhook URL</td>
+            <td>Webhook registered</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+        <tr>
+            <td>UC-ALERT-004</td>
+            <td>Send Manual Alert</td>
+            <td>Manually trigger an alert notification</td>
+            <td>Admin</td>
+            <td>Alert configuration exists</td>
+            <td>Alert sent to recipients</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+    </table>
+
+    <h3>Test Cases - Alerts & Notifications</h3>
+    <table>
+        <tr>
+            <th>TC ID</th>
+            <th>Test Case Name</th>
+            <th>API Endpoint</th>
+            <th>Method</th>
+            <th>Test Steps</th>
+            <th>Test Data</th>
+            <th>Expected Result</th>
+            <th>Priority</th>
+            <th>Status</th>
+        </tr>
+        <tr>
+            <td>TC-ALERT-001</td>
+            <td>Configure Expiration Alert</td>
+            <td>/api/alerts/configure</td>
+            <td>POST</td>
+            <td>1. Login 2. Configure alert</td>
+            <td>{"name":"Expiration Alert","alertType":"CERTIFICATE_EXPIRING","thresholdDays":30,"emailRecipients":["admin@example.com"]}</td>
+            <td>201 Created, Alert configured</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-ALERT-002</td>
+            <td>Get Alert History</td>
+            <td>/api/alerts/history</td>
+            <td>GET</td>
+            <td>1. Login 2. Get alert history</td>
+            <td>page=0, size=20</td>
+            <td>200 OK, Alert history list</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-ALERT-003</td>
+            <td>Register Webhook</td>
+            <td>/api/webhooks/register</td>
+            <td>POST</td>
+            <td>1. Login 2. Register webhook</td>
+            <td>{"url":"https://app.com/webhook","events":["CERTIFICATE_ISSUED"]}</td>
+            <td>201 Created, Webhook registered</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-ALERT-004</td>
+            <td>Get Notification Preferences</td>
+            <td>/api/notifications/preferences</td>
+            <td>GET</td>
+            <td>1. Login 2. Get preferences</td>
+            <td>-</td>
+            <td>200 OK, Notification preferences</td>
+            <td class="priority-low">Low</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-ALERT-005</td>
+            <td>Send Certificate Expiration Alert</td>
+            <td>/api/alerts/send/certificate-expiration</td>
+            <td>POST</td>
+            <td>1. Login 2. Send alert</td>
+            <td>{"certificateId":1,"daysUntilExpiry":15,"recipients":["admin@example.com"]}</td>
+            <td>200 OK, Alert sent</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-ALERT-006</td>
+            <td>Send Bulk Operation Alert</td>
+            <td>/api/alerts/send/bulk-operation</td>
+            <td>POST</td>
+            <td>1. Login 2. Send bulk alert</td>
+            <td>{"operationType":"BULK_RENEWAL","totalProcessed":50,"successCount":48}</td>
+            <td>200 OK, Alert sent</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+    </table>
+
+    <!-- SECTION 7: AUTOMATION & LIFECYCLE -->
+    <h2>7. Automation & Lifecycle</h2>
+    <h3>Business Use Cases</h3>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Description</th>
+            <th>Actors</th>
+            <th>Pre-conditions</th>
+            <th>Post-conditions</th>
+            <th>Priority</th>
+        </tr>
+        <tr>
+            <td>UC-AUTO-001</td>
+            <td>Enable Auto-Renewal</td>
+            <td>Enable automatic renewal for a certificate</td>
+            <td>Admin</td>
+            <td>Certificate exists</td>
+            <td>Auto-renewal scheduled</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-AUTO-002</td>
+            <td>Create Certificate Template</td>
+            <td>Create reusable certificate template</td>
+            <td>Admin</td>
+            <td>User has template permission</td>
+            <td>Template created</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+        <tr>
+            <td>UC-AUTO-003</td>
+            <td>Bulk Issue Certificates</td>
+            <td>Issue multiple certificates in one operation</td>
+            <td>Admin</td>
+            <td>CA available</td>
+            <td>Bulk job created, certificates issued</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-AUTO-004</td>
+            <td>Bulk Renew Certificates</td>
+            <td>Renew multiple certificates at once</td>
+            <td>Admin</td>
+            <td>Certificates exist</td>
+            <td>Bulk job created, certs renewed</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-AUTO-005</td>
+            <td>Bulk Revoke Certificates</td>
+            <td>Revoke multiple certificates simultaneously</td>
+            <td>Admin, Security</td>
+            <td>Certificates exist</td>
+            <td>Bulk job created, certs revoked</td>
+            <td class="priority-high">High</td>
+        </tr>
+    </table>
+
+    <h3>Test Cases - Automation & Lifecycle</h3>
+    <table>
+        <tr>
+            <th>TC ID</th>
+            <th>Test Case Name</th>
+            <th>API Endpoint</th>
+            <th>Method</th>
+            <th>Test Steps</th>
+            <th>Test Data</th>
+            <th>Expected Result</th>
+            <th>Priority</th>
+            <th>Status</th>
+        </tr>
+        <tr>
+            <td>TC-AUTO-001</td>
+            <td>Enable Auto-Renewal</td>
+            <td>/api/certificates/auto-renew/enable</td>
+            <td>POST</td>
+            <td>1. Login 2. Enable auto-renewal</td>
+            <td>{"certificateId":1,"daysBeforeExpiry":30,"enabled":true,"maxRetries":3}</td>
+            <td>200 OK, Auto-renewal enabled</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-AUTO-002</td>
+            <td>Create Certificate Template</td>
+            <td>/api/certificates/templates/create</td>
+            <td>POST</td>
+            <td>1. Login 2. Create template</td>
+            <td>{"name":"Web Server Template","algorithm":"RSA","keySize":2048,"validityDays":365}</td>
+            <td>201 Created, Template created</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-fail">FAIL - 404</td>
+        </tr>
+        <tr>
+            <td>TC-AUTO-003</td>
+            <td>Bulk Issue Certificates</td>
+            <td>/api/certificates/bulk-issue</td>
+            <td>POST</td>
+            <td>1. Login 2. Bulk issue</td>
+            <td>{"commonNames":["web1.example.com","web2.example.com"],"validityDays":365}</td>
+            <td>202 Accepted, Job created</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-AUTO-004</td>
+            <td>Bulk Renew Certificates</td>
+            <td>/api/certificates/bulk-renew</td>
+            <td>POST</td>
+            <td>1. Login 2. Bulk renew</td>
+            <td>{"certificateIds":[1,2,3,4,5]}</td>
+            <td>202 Accepted, Job created</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-AUTO-005</td>
+            <td>Bulk Revoke Certificates</td>
+            <td>/api/certificates/bulk-revoke</td>
+            <td>POST</td>
+            <td>1. Login 2. Bulk revoke</td>
+            <td>{"certificateIds":[8,9,10],"reason":"SUPERSEDED"}</td>
+            <td>202 Accepted, Job created</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+    </table>
+
+    <!-- SECTION 8: COMPLIANCE & REPORTING -->
+    <h2>8. Compliance & Reporting</h2>
+    <h3>Business Use Cases</h3>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Description</th>
+            <th>Actors</th>
+            <th>Pre-conditions</th>
+            <th>Post-conditions</th>
+            <th>Priority</th>
+        </tr>
+        <tr>
+            <td>UC-COMP-001</td>
+            <td>Generate Compliance Report</td>
+            <td>Generate compliance report for PCI-DSS/SOC2/GDPR</td>
+            <td>Admin, Auditor</td>
+            <td>Certificates exist</td>
+            <td>Report generated</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-COMP-002</td>
+            <td>Export Certificate Inventory</td>
+            <td>Export all certificates in JSON/CSV/PDF</td>
+            <td>Admin, Auditor</td>
+            <td>Certificates exist</td>
+            <td>Export file generated</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-COMP-003</td>
+            <td>View Audit Logs</td>
+            <td>View complete audit trail of all operations</td>
+            <td>Admin, Auditor</td>
+            <td>User authenticated</td>
+            <td>Audit logs displayed</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-COMP-004</td>
+            <td>Generate Expiring Certs Report</td>
+            <td>Generate report of expiring certificates</td>
+            <td>Admin</td>
+            <td>User authenticated</td>
+            <td>Report generated</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+    </table>
+
+    <h3>Test Cases - Compliance & Reporting</h3>
+    <table>
+        <tr>
+            <th>TC ID</th>
+            <th>Test Case Name</th>
+            <th>API Endpoint</th>
+            <th>Method</th>
+            <th>Test Steps</th>
+            <th>Test Data</th>
+            <th>Expected Result</th>
+            <th>Priority</th>
+            <th>Status</th>
+        </tr>
+        <tr>
+            <td>TC-COMP-001</td>
+            <td>Get PCI-DSS Compliance Report</td>
+            <td>/api/reports/compliance</td>
+            <td>GET</td>
+            <td>1. Login 2. Get compliance report</td>
+            <td>standard=PCI_DSS</td>
+            <td>200 OK, PCI-DSS compliance report</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-COMP-002</td>
+            <td>Get SOC2 Compliance Report</td>
+            <td>/api/reports/compliance</td>
+            <td>GET</td>
+            <td>1. Login 2. Get compliance report</td>
+            <td>standard=SOC2</td>
+            <td>200 OK, SOC2 compliance report</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-COMP-003</td>
+            <td>Get Certificate Inventory - JSON</td>
+            <td>/api/reports/inventory</td>
+            <td>GET</td>
+            <td>1. Login 2. Export inventory</td>
+            <td>format=JSON</td>
+            <td>200 OK, JSON inventory</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-COMP-004</td>
+            <td>Get Certificate Inventory - CSV</td>
+            <td>/api/reports/inventory</td>
+            <td>GET</td>
+            <td>1. Login 2. Export as CSV</td>
+            <td>format=CSV</td>
+            <td>200 OK, CSV file</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-COMP-005</td>
+            <td>Get Audit Logs</td>
+            <td>/api/audit-logs</td>
+            <td>GET</td>
+            <td>1. Login 2. Get audit logs</td>
+            <td>page=0, size=50</td>
+            <td>200 OK, Paginated audit logs</td>
+            <td class="priority-high">High</td>
+            <td class="status-pass">PASS</td>
+        </tr>
+        <tr>
+            <td>TC-COMP-006</td>
+            <td>Get Audit Logs - Filter by Action</td>
+            <td>/api/audit-logs</td>
+            <td>GET</td>
+            <td>1. Login 2. Filter by action</td>
+            <td>action=CERTIFICATE_ISSUED</td>
+            <td>200 OK, Filtered audit logs</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-COMP-007</td>
+            <td>Get Expiring Certificates Report</td>
+            <td>/api/reports/expiring</td>
+            <td>GET</td>
+            <td>1. Login 2. Get report</td>
+            <td>days=30, format=PDF</td>
+            <td>200 OK, PDF report</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+    </table>
+
+    <!-- SECTION 9: DISCOVERY & INTEGRATION -->
+    <h2>9. Discovery & Integration</h2>
+    <h3>Business Use Cases</h3>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Description</th>
+            <th>Actors</th>
+            <th>Pre-conditions</th>
+            <th>Post-conditions</th>
+            <th>Priority</th>
+        </tr>
+        <tr>
+            <td>UC-DISC-001</td>
+            <td>LDAP/AD Certificate Scan</td>
+            <td>Discover certificates from LDAP/Active Directory</td>
+            <td>Admin</td>
+            <td>LDAP server accessible</td>
+            <td>Certificates discovered, imported</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-DISC-002</td>
+            <td>Cloud Provider Scan</td>
+            <td>Scan AWS ACM/Azure/GCP for certificates</td>
+            <td>Admin</td>
+            <td>Cloud credentials configured</td>
+            <td>Cloud certificates discovered</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-DISC-003</td>
+            <td>Filesystem Scan</td>
+            <td>Scan filesystem for certificate files</td>
+            <td>Admin</td>
+            <td>Path accessible</td>
+            <td>Certificates discovered</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+        <tr>
+            <td>UC-DISC-004</td>
+            <td>Network Scan (Nmap)</td>
+            <td>Scan network for SSL/TLS certificates</td>
+            <td>Admin</td>
+            <td>Network range specified</td>
+            <td>Network certificates discovered</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-DISC-005</td>
+            <td>Schedule Discovery</td>
+            <td>Schedule recurring discovery scans</td>
+            <td>Admin</td>
+            <td>Discovery config exists</td>
+            <td>Scheduled job created</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+    </table>
+
+    <h3>Test Cases - Discovery & Integration</h3>
+    <table>
+        <tr>
+            <th>TC ID</th>
+            <th>Test Case Name</th>
+            <th>API Endpoint</th>
+            <th>Method</th>
+            <th>Test Steps</th>
+            <th>Test Data</th>
+            <th>Expected Result</th>
+            <th>Priority</th>
+            <th>Status</th>
+        </tr>
+        <tr>
+            <td>TC-DISC-001</td>
+            <td>LDAP Certificate Scan</td>
+            <td>/api/discovery/scan/ldap</td>
+            <td>POST</td>
+            <td>1. Login 2. Scan LDAP</td>
+            <td>{"ldapUrl":"ldap://ldap.example.com:389","baseDn":"dc=example,dc=com"}</td>
+            <td>202 Accepted, Scan started</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-DISC-002</td>
+            <td>Cloud Provider Scan - AWS</td>
+            <td>/api/discovery/scan/cloud</td>
+            <td>POST</td>
+            <td>1. Login 2. Scan AWS ACM</td>
+            <td>{"provider":"AWS","region":"us-east-1","service":"ACM"}</td>
+            <td>202 Accepted, Scan started</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-DISC-003</td>
+            <td>Filesystem Scan</td>
+            <td>/api/discovery/scan/filesystem</td>
+            <td>POST</td>
+            <td>1. Login 2. Scan path</td>
+            <td>{"path":"/etc/ssl/certs","recursive":true}</td>
+            <td>202 Accepted, Scan started</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-DISC-004</td>
+            <td>Network Scan (Nmap)</td>
+            <td>/api/nmap/scan</td>
+            <td>POST</td>
+            <td>1. Login 2. Scan network</td>
+            <td>{"target":"192.168.1.0/24","ports":"443,8443"}</td>
+            <td>202 Accepted, Scan started</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-DISC-005</td>
+            <td>Get Scanned Certificates</td>
+            <td>/api/nmap/certificates</td>
+            <td>GET</td>
+            <td>1. Login 2. Get scanned certs</td>
+            <td>-</td>
+            <td>200 OK, List of scanned certificates</td>
+            <td class="priority-high">High</td>
+            <td class="status-pass">PASS</td>
+        </tr>
+        <tr>
+            <td>TC-DISC-006</td>
+            <td>Schedule Discovery Scan</td>
+            <td>/api/discovery/schedule</td>
+            <td>POST</td>
+            <td>1. Login 2. Schedule scan</td>
+            <td>{"discoveryType":"LDAP","schedule":"0 0 2 * * ?","enabled":true}</td>
+            <td>201 Created, Schedule created</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-DISC-007</td>
+            <td>Get Discovery Changes</td>
+            <td>/api/discovery/changes</td>
+            <td>GET</td>
+            <td>1. Login 2. Get changes</td>
+            <td>since=2026-01-01</td>
+            <td>200 OK, Change list</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+    </table>
+
+    <!-- SECTION 10: SECURITY & ACCESS CONTROL -->
+    <h2>10. Security & Access Control</h2>
+    <h3>Business Use Cases</h3>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Description</th>
+            <th>Actors</th>
+            <th>Pre-conditions</th>
+            <th>Post-conditions</th>
+            <th>Priority</th>
+        </tr>
+        <tr>
+            <td>UC-SEC-001</td>
+            <td>Configure SAML/SSO</td>
+            <td>Configure SAML integration with Azure AD/Okta</td>
+            <td>Admin</td>
+            <td>IdP configured</td>
+            <td>SSO enabled</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-SEC-002</td>
+            <td>Enable MFA</td>
+            <td>Enable Multi-Factor Authentication for user</td>
+            <td>Admin, User</td>
+            <td>User exists</td>
+            <td>MFA enabled, TOTP configured</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-SEC-003</td>
+            <td>Create RBAC Role</td>
+            <td>Create role with granular permissions</td>
+            <td>Admin</td>
+            <td>User is admin</td>
+            <td>Role created</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-SEC-004</td>
+            <td>Generate API Key</td>
+            <td>Generate API key for service integration</td>
+            <td>Admin</td>
+            <td>User authenticated</td>
+            <td>API key generated</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-SEC-005</td>
+            <td>Configure Key Rotation</td>
+            <td>Set up automatic key rotation policies</td>
+            <td>Admin</td>
+            <td>User is admin</td>
+            <td>Rotation policy configured</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+    </table>
+
+    <h3>Test Cases - Security & Access Control</h3>
+    <table>
+        <tr>
+            <th>TC ID</th>
+            <th>Test Case Name</th>
+            <th>API Endpoint</th>
+            <th>Method</th>
+            <th>Test Steps</th>
+            <th>Test Data</th>
+            <th>Expected Result</th>
+            <th>Priority</th>
+            <th>Status</th>
+        </tr>
+        <tr>
+            <td>TC-SEC-001</td>
+            <td>Configure SAML SSO</td>
+            <td>/api/security/saml/configure</td>
+            <td>POST</td>
+            <td>1. Login 2. Configure SAML</td>
+            <td>{"provider":"Azure AD","entityId":"https://certaxis.example.com"}</td>
+            <td>200 OK, SAML configured</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-SEC-002</td>
+            <td>Enable MFA</td>
+            <td>/api/security/mfa/enable</td>
+            <td>POST</td>
+            <td>1. Login 2. Enable MFA</td>
+            <td>{"userId":1,"method":"TOTP","enabled":true}</td>
+            <td>200 OK, MFA enabled with QR code</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-SEC-003</td>
+            <td>Create RBAC Role</td>
+            <td>/api/security/rbac/roles</td>
+            <td>POST</td>
+            <td>1. Login 2. Create role</td>
+            <td>{"name":"Certificate Manager","permissions":["CERTIFICATE_READ","CERTIFICATE_CREATE"]}</td>
+            <td>201 Created, Role created</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-SEC-004</td>
+            <td>List RBAC Roles</td>
+            <td>/api/security/rbac/roles</td>
+            <td>GET</td>
+            <td>1. Login 2. List roles</td>
+            <td>-</td>
+            <td>200 OK, List of roles</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-SEC-005</td>
+            <td>Generate API Key</td>
+            <td>/api/security/api-keys/generate</td>
+            <td>POST</td>
+            <td>1. Login 2. Generate API key</td>
+            <td>{"name":"CI/CD Key","permissions":["CERTIFICATE_READ"],"expiresInDays":90}</td>
+            <td>201 Created, API key returned</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-SEC-006</td>
+            <td>Configure Key Rotation</td>
+            <td>/api/security/keys/rotation/configure</td>
+            <td>POST</td>
+            <td>1. Login 2. Configure rotation</td>
+            <td>{"rotationIntervalDays":90,"autoRotate":true}</td>
+            <td>200 OK, Rotation configured</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+    </table>
+
+    <!-- SECTION 11: ACME PROTOCOL -->
+    <h2>11. ACME Protocol</h2>
+    <h3>Business Use Cases</h3>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Description</th>
+            <th>Actors</th>
+            <th>Pre-conditions</th>
+            <th>Post-conditions</th>
+            <th>Priority</th>
+        </tr>
+        <tr>
+            <td>UC-ACME-001</td>
+            <td>Create ACME Provider</td>
+            <td>Configure Let's Encrypt/ZeroSSL provider</td>
+            <td>Admin</td>
+            <td>Valid directory URL</td>
+            <td>Provider configured</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-ACME-002</td>
+            <td>Create ACME Account</td>
+            <td>Register account with ACME provider</td>
+            <td>Admin</td>
+            <td>Provider exists</td>
+            <td>Account registered</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-ACME-003</td>
+            <td>Create ACME Order</td>
+            <td>Create certificate order for domains</td>
+            <td>Admin, User</td>
+            <td>Account exists</td>
+            <td>Order created, challenges pending</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-ACME-004</td>
+            <td>Complete Challenge</td>
+            <td>Complete domain validation challenge</td>
+            <td>Admin, User</td>
+            <td>Order exists with pending challenges</td>
+            <td>Challenge validated</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-ACME-005</td>
+            <td>Finalize Order</td>
+            <td>Finalize order and get certificate</td>
+            <td>Admin, User</td>
+            <td>All challenges valid</td>
+            <td>Certificate issued</td>
+            <td class="priority-high">High</td>
+        </tr>
+    </table>
+
+    <h3>Test Cases - ACME Protocol</h3>
+    <table>
+        <tr>
+            <th>TC ID</th>
+            <th>Test Case Name</th>
+            <th>API Endpoint</th>
+            <th>Method</th>
+            <th>Test Steps</th>
+            <th>Test Data</th>
+            <th>Expected Result</th>
+            <th>Priority</th>
+            <th>Status</th>
+        </tr>
+        <tr>
+            <td>TC-ACME-001</td>
+            <td>Create ACME Provider</td>
+            <td>/api/acme/providers</td>
+            <td>POST</td>
+            <td>1. Login 2. Create provider</td>
+            <td>{"name":"Let's Encrypt","type":"LETS_ENCRYPT_PROD","directoryUrl":"https://acme-v02.api.letsencrypt.org/directory"}</td>
+            <td>201 Created</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-ACME-002</td>
+            <td>List ACME Providers</td>
+            <td>/api/acme/providers</td>
+            <td>GET</td>
+            <td>1. Login 2. List providers</td>
+            <td>-</td>
+            <td>200 OK, List of providers</td>
+            <td class="priority-high">High</td>
+            <td class="status-fail">FAIL - 500</td>
+        </tr>
+        <tr>
+            <td>TC-ACME-003</td>
+            <td>Get ACME Provider by ID</td>
+            <td>/api/acme/providers/:id</td>
+            <td>GET</td>
+            <td>1. Login 2. Get provider</td>
+            <td>id: 1</td>
+            <td>200 OK, Provider details</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-ACME-004</td>
+            <td>List ACME Accounts</td>
+            <td>/api/acme/accounts</td>
+            <td>GET</td>
+            <td>1. Login 2. List accounts</td>
+            <td>-</td>
+            <td>200 OK, List of accounts</td>
+            <td class="priority-high">High</td>
+            <td class="status-pass">PASS</td>
+        </tr>
+        <tr>
+            <td>TC-ACME-005</td>
+            <td>Create ACME Order</td>
+            <td>/api/acme/orders</td>
+            <td>POST</td>
+            <td>1. Login 2. Create order</td>
+            <td>{"accountId":1,"domains":["example.com","www.example.com"]}</td>
+            <td>201 Created, Order with challenges</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-ACME-006</td>
+            <td>List ACME Orders</td>
+            <td>/api/acme/orders</td>
+            <td>GET</td>
+            <td>1. Login 2. List orders</td>
+            <td>-</td>
+            <td>200 OK, List of orders</td>
+            <td class="priority-high">High</td>
+            <td class="status-fail">FAIL - 500</td>
+        </tr>
+        <tr>
+            <td>TC-ACME-007</td>
+            <td>Get Order Status</td>
+            <td>/api/acme/orders/:id/status</td>
+            <td>GET</td>
+            <td>1. Login 2. Get order status</td>
+            <td>id: 1</td>
+            <td>200 OK, Order status</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-ACME-008</td>
+            <td>Trigger Challenge Validation</td>
+            <td>/api/acme/challenges/:id/trigger</td>
+            <td>POST</td>
+            <td>1. Create order 2. Trigger challenge</td>
+            <td>id: 1</td>
+            <td>200 OK, Challenge triggered</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-ACME-009</td>
+            <td>Get Auto-Renewal Status</td>
+            <td>/api/acme/renewal/status</td>
+            <td>GET</td>
+            <td>1. Login 2. Get renewal status</td>
+            <td>-</td>
+            <td>200 OK, Renewal config</td>
+            <td class="priority-high">High</td>
+            <td class="status-pass">PASS</td>
+        </tr>
+        <tr>
+            <td>TC-ACME-010</td>
+            <td>Enable ACME Auto-Renewal</td>
+            <td>/api/acme/renewal/enable</td>
+            <td>POST</td>
+            <td>1. Login 2. Enable renewal</td>
+            <td>{"certificateId":1,"daysBeforeExpiry":30}</td>
+            <td>200 OK, Renewal enabled</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+    </table>
+
+    <!-- SECTION 12: ACME MONITORING & METRICS -->
+    <h2>12. ACME Monitoring & Metrics</h2>
+    <h3>Business Use Cases</h3>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Description</th>
+            <th>Actors</th>
+            <th>Pre-conditions</th>
+            <th>Post-conditions</th>
+            <th>Priority</th>
+        </tr>
+        <tr>
+            <td>UC-ACME-MON-001</td>
+            <td>Create ACME Webhook</td>
+            <td>Configure webhook for ACME events</td>
+            <td>Admin</td>
+            <td>Valid webhook URL</td>
+            <td>Webhook registered</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+        <tr>
+            <td>UC-ACME-MON-002</td>
+            <td>View ACME Dashboard</td>
+            <td>View ACME metrics dashboard summary</td>
+            <td>Admin, User</td>
+            <td>ACME orders exist</td>
+            <td>Dashboard displayed</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-ACME-MON-003</td>
+            <td>View Provider Metrics</td>
+            <td>View performance metrics by provider</td>
+            <td>Admin</td>
+            <td>ACME activity exists</td>
+            <td>Metrics displayed</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+    </table>
+
+    <h3>Test Cases - ACME Monitoring</h3>
+    <table>
+        <tr>
+            <th>TC ID</th>
+            <th>Test Case Name</th>
+            <th>API Endpoint</th>
+            <th>Method</th>
+            <th>Test Steps</th>
+            <th>Test Data</th>
+            <th>Expected Result</th>
+            <th>Priority</th>
+            <th>Status</th>
+        </tr>
+        <tr>
+            <td>TC-ACME-MON-001</td>
+            <td>Create ACME Webhook</td>
+            <td>/api/acme/monitoring/webhooks</td>
+            <td>POST</td>
+            <td>1. Login 2. Create webhook</td>
+            <td>{"url":"https://app.com/acme/webhook","events":["ORDER_COMPLETED"]}</td>
+            <td>201 Created</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-ACME-MON-002</td>
+            <td>List ACME Webhooks</td>
+            <td>/api/acme/monitoring/webhooks</td>
+            <td>GET</td>
+            <td>1. Login 2. List webhooks</td>
+            <td>-</td>
+            <td>200 OK, List of webhooks</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pass">PASS</td>
+        </tr>
+        <tr>
+            <td>TC-ACME-MON-003</td>
+            <td>Get ACME Dashboard</td>
+            <td>/api/acme/monitoring/dashboard</td>
+            <td>GET</td>
+            <td>1. Login 2. Get dashboard</td>
+            <td>-</td>
+            <td>200 OK, Dashboard summary</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-ACME-MON-004</td>
+            <td>Get ACME Metrics Summary</td>
+            <td>/api/acme/monitoring/metrics/summary</td>
+            <td>GET</td>
+            <td>1. Login 2. Get summary</td>
+            <td>-</td>
+            <td>200 OK, Aggregated metrics</td>
+            <td class="priority-high">High</td>
+            <td class="status-pass">PASS</td>
+        </tr>
+        <tr>
+            <td>TC-ACME-MON-005</td>
+            <td>Get Last 7 Days Metrics</td>
+            <td>/api/acme/monitoring/metrics/week</td>
+            <td>GET</td>
+            <td>1. Login 2. Get week metrics</td>
+            <td>-</td>
+            <td>200 OK, Weekly metrics</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-ACME-MON-006</td>
+            <td>Get Provider Comparison</td>
+            <td>/api/acme/monitoring/metrics/comparison</td>
+            <td>GET</td>
+            <td>1. Login 2. Get comparison</td>
+            <td>-</td>
+            <td>200 OK, Provider comparison</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-ACME-MON-007</td>
+            <td>Get ACME Health Status</td>
+            <td>/api/acme/monitoring/health</td>
+            <td>GET</td>
+            <td>1. Login 2. Get health</td>
+            <td>-</td>
+            <td>200 OK, Health status</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+    </table>
+
+    <!-- SECTION 13: BACKGROUND JOBS -->
+    <h2>13. Background Jobs</h2>
+    <h3>Business Use Cases</h3>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Description</th>
+            <th>Actors</th>
+            <th>Pre-conditions</th>
+            <th>Post-conditions</th>
+            <th>Priority</th>
+        </tr>
+        <tr>
+            <td>UC-JOB-001</td>
+            <td>View Job Status</td>
+            <td>View status and progress of background job</td>
+            <td>Admin, User</td>
+            <td>Job exists</td>
+            <td>Job status displayed</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-JOB-002</td>
+            <td>View My Jobs</td>
+            <td>View all jobs created by current user</td>
+            <td>Admin, User</td>
+            <td>User authenticated</td>
+            <td>User jobs listed</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+        <tr>
+            <td>UC-JOB-003</td>
+            <td>Filter Jobs by Status</td>
+            <td>Filter jobs by PENDING/RUNNING/COMPLETED/FAILED</td>
+            <td>Admin</td>
+            <td>Jobs exist</td>
+            <td>Filtered jobs displayed</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+    </table>
+
+    <h3>Test Cases - Background Jobs</h3>
+    <table>
+        <tr>
+            <th>TC ID</th>
+            <th>Test Case Name</th>
+            <th>API Endpoint</th>
+            <th>Method</th>
+            <th>Test Steps</th>
+            <th>Test Data</th>
+            <th>Expected Result</th>
+            <th>Priority</th>
+            <th>Status</th>
+        </tr>
+        <tr>
+            <td>TC-JOB-001</td>
+            <td>Get Job by ID</td>
+            <td>/api/jobs/:jobId</td>
+            <td>GET</td>
+            <td>1. Login 2. Get job status</td>
+            <td>jobId: 1</td>
+            <td>200 OK, Job details</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-JOB-002</td>
+            <td>Get My Jobs</td>
+            <td>/api/jobs/my-jobs</td>
+            <td>GET</td>
+            <td>1. Login 2. Get my jobs</td>
+            <td>-</td>
+            <td>200 OK, List of user jobs</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-JOB-003</td>
+            <td>Get Jobs by Status - RUNNING</td>
+            <td>/api/jobs/status/:status</td>
+            <td>GET</td>
+            <td>1. Login 2. Filter by status</td>
+            <td>status: RUNNING</td>
+            <td>200 OK, Running jobs</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-JOB-004</td>
+            <td>Get Running Jobs</td>
+            <td>/api/jobs/running</td>
+            <td>GET</td>
+            <td>1. Login 2. Get running jobs</td>
+            <td>-</td>
+            <td>200 OK, List of running jobs</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-JOB-005</td>
+            <td>Get Recent Jobs</td>
+            <td>/api/jobs/recent</td>
+            <td>GET</td>
+            <td>1. Login 2. Get recent jobs</td>
+            <td>hours=24</td>
+            <td>200 OK, Jobs from last 24h</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+    </table>
+
+    <!-- SECTION 14: RATE LIMIT MONITORING -->
+    <h2>14. Rate Limit Monitoring</h2>
+    <h3>Business Use Cases</h3>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Description</th>
+            <th>Actors</th>
+            <th>Pre-conditions</th>
+            <th>Post-conditions</th>
+            <th>Priority</th>
+        </tr>
+        <tr>
+            <td>UC-RATE-001</td>
+            <td>View Rate Limit Violations</td>
+            <td>View all rate limit violations</td>
+            <td>Admin, Security</td>
+            <td>User authenticated</td>
+            <td>Violations displayed</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-RATE-002</td>
+            <td>View Violations by IP</td>
+            <td>Filter violations by IP address</td>
+            <td>Admin, Security</td>
+            <td>Violations exist</td>
+            <td>IP violations displayed</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+        <tr>
+            <td>UC-RATE-003</td>
+            <td>View Top Offenders</td>
+            <td>View most abusive IPs/users</td>
+            <td>Admin, Security</td>
+            <td>Violations exist</td>
+            <td>Top offenders ranked</td>
+            <td class="priority-high">High</td>
+        </tr>
+    </table>
+
+    <h3>Test Cases - Rate Limit Monitoring</h3>
+    <table>
+        <tr>
+            <th>TC ID</th>
+            <th>Test Case Name</th>
+            <th>API Endpoint</th>
+            <th>Method</th>
+            <th>Test Steps</th>
+            <th>Test Data</th>
+            <th>Expected Result</th>
+            <th>Priority</th>
+            <th>Status</th>
+        </tr>
+        <tr>
+            <td>TC-RATE-001</td>
+            <td>Get All Violations</td>
+            <td>/api/rate-limit/violations</td>
+            <td>GET</td>
+            <td>1. Login 2. Get violations</td>
+            <td>startTime=2026-01-01, endTime=2026-01-31</td>
+            <td>200 OK, List of violations</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-RATE-002</td>
+            <td>Get Violations by IP</td>
+            <td>/api/rate-limit/violations/ip/:ip</td>
+            <td>GET</td>
+            <td>1. Login 2. Get IP violations</td>
+            <td>ip: 192.168.1.100</td>
+            <td>200 OK, IP violations</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-RATE-003</td>
+            <td>Get Violations by User</td>
+            <td>/api/rate-limit/violations/user/:userId</td>
+            <td>GET</td>
+            <td>1. Login 2. Get user violations</td>
+            <td>userId: 1</td>
+            <td>200 OK, User violations</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-RATE-004</td>
+            <td>Get Rate Limit Metrics</td>
+            <td>/api/rate-limit/metrics</td>
+            <td>GET</td>
+            <td>1. Login 2. Get metrics</td>
+            <td>-</td>
+            <td>200 OK, Aggregate metrics</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-RATE-005</td>
+            <td>Get Top Offenders</td>
+            <td>/api/rate-limit/top-offenders</td>
+            <td>GET</td>
+            <td>1. Login 2. Get top offenders</td>
+            <td>limit=10</td>
+            <td>200 OK, Top 10 offenders</td>
+            <td class="priority-high">High</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+    </table>
+
+    <!-- SECTION 15: HEALTH & ACTUATOR -->
+    <h2>15. Health & Actuator</h2>
+    <h3>Business Use Cases</h3>
+    <table>
+        <tr>
+            <th>UC ID</th>
+            <th>Use Case Name</th>
+            <th>Description</th>
+            <th>Actors</th>
+            <th>Pre-conditions</th>
+            <th>Post-conditions</th>
+            <th>Priority</th>
+        </tr>
+        <tr>
+            <td>UC-HEALTH-001</td>
+            <td>Check System Health</td>
+            <td>View overall system health status</td>
+            <td>Admin, Monitoring</td>
+            <td>System running</td>
+            <td>Health status displayed</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>UC-HEALTH-002</td>
+            <td>View Application Metrics</td>
+            <td>View JVM and application metrics</td>
+            <td>Admin</td>
+            <td>User authenticated</td>
+            <td>Metrics displayed</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+        <tr>
+            <td>UC-HEALTH-003</td>
+            <td>Export Prometheus Metrics</td>
+            <td>Get metrics in Prometheus format</td>
+            <td>Monitoring System</td>
+            <td>Prometheus enabled</td>
+            <td>Metrics scraped</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+    </table>
+
+    <h3>Test Cases - Health & Actuator</h3>
+    <table>
+        <tr>
+            <th>TC ID</th>
+            <th>Test Case Name</th>
+            <th>API Endpoint</th>
+            <th>Method</th>
+            <th>Test Steps</th>
+            <th>Test Data</th>
+            <th>Expected Result</th>
+            <th>Priority</th>
+            <th>Status</th>
+        </tr>
+        <tr>
+            <td>TC-HEALTH-001</td>
+            <td>Health Check</td>
+            <td>/actuator/health</td>
+            <td>GET</td>
+            <td>1. Call health endpoint</td>
+            <td>No auth required</td>
+            <td>200 OK, {"status":"UP"}</td>
+            <td class="priority-high">High</td>
+            <td class="status-pass">PASS</td>
+        </tr>
+        <tr>
+            <td>TC-HEALTH-002</td>
+            <td>List Application Metrics</td>
+            <td>/actuator/metrics</td>
+            <td>GET</td>
+            <td>1. Login 2. Get metrics list</td>
+            <td>-</td>
+            <td>200 OK, List of metric names</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-HEALTH-003</td>
+            <td>Get Specific Metric - JVM Memory</td>
+            <td>/actuator/metrics/jvm.memory.used</td>
+            <td>GET</td>
+            <td>1. Login 2. Get specific metric</td>
+            <td>metricName: jvm.memory.used</td>
+            <td>200 OK, Metric value</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-HEALTH-004</td>
+            <td>Prometheus Metrics</td>
+            <td>/actuator/prometheus</td>
+            <td>GET</td>
+            <td>1. Call prometheus endpoint</td>
+            <td>No auth required</td>
+            <td>200 OK, Prometheus format</td>
+            <td class="priority-medium">Medium</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-HEALTH-005</td>
+            <td>HTTP Trace</td>
+            <td>/actuator/httptrace</td>
+            <td>GET</td>
+            <td>1. Login 2. Get HTTP trace</td>
+            <td>-</td>
+            <td>200 OK, Last 100 requests</td>
+            <td class="priority-low">Low</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+        <tr>
+            <td>TC-HEALTH-006</td>
+            <td>Application Info</td>
+            <td>/actuator/info</td>
+            <td>GET</td>
+            <td>1. Call info endpoint</td>
+            <td>No auth required</td>
+            <td>200 OK, App version/build info</td>
+            <td class="priority-low">Low</td>
+            <td class="status-pending">PENDING</td>
+        </tr>
+    </table>
+
+    <!-- SUMMARY SECTION -->
+    <h2>Test Execution Summary</h2>
+    <table>
+        <tr>
+            <th>Section</th>
+            <th>Total Test Cases</th>
+            <th>Passed</th>
+            <th>Failed</th>
+            <th>Pending</th>
+            <th>Pass Rate</th>
+        </tr>
+        <tr>
+            <td>1. Authentication & Security</td>
+            <td>10</td>
+            <td class="status-pass">2</td>
+            <td class="status-fail">0</td>
+            <td class="status-pending">8</td>
+            <td>20%</td>
+        </tr>
+        <tr>
+            <td>2. Certificate Management</td>
+            <td>14</td>
+            <td class="status-pass">1</td>
+            <td class="status-fail">0</td>
+            <td class="status-pending">13</td>
+            <td>7%</td>
+        </tr>
+        <tr>
+            <td>3. Certificate Operations</td>
+            <td>7</td>
+            <td class="status-pass">0</td>
+            <td class="status-fail">0</td>
+            <td class="status-pending">7</td>
+            <td>0%</td>
+        </tr>
+        <tr>
+            <td>4. Certificate Authority</td>
+            <td>7</td>
+            <td class="status-pass">1</td>
+            <td class="status-fail">0</td>
+            <td class="status-pending">6</td>
+            <td>14%</td>
+        </tr>
+        <tr>
+            <td>5. Dashboard & Analytics</td>
+            <td>5</td>
+            <td class="status-pass">1</td>
+            <td class="status-fail">0</td>
+            <td class="status-pending">4</td>
+            <td>20%</td>
+        </tr>
+        <tr>
+            <td>6. Alerts & Notifications</td>
+            <td>6</td>
+            <td class="status-pass">0</td>
+            <td class="status-fail">0</td>
+            <td class="status-pending">6</td>
+            <td>0%</td>
+        </tr>
+        <tr>
+            <td>7. Automation & Lifecycle</td>
+            <td>5</td>
+            <td class="status-pass">0</td>
+            <td class="status-fail">1</td>
+            <td class="status-pending">4</td>
+            <td>0%</td>
+        </tr>
+        <tr>
+            <td>8. Compliance & Reporting</td>
+            <td>7</td>
+            <td class="status-pass">1</td>
+            <td class="status-fail">0</td>
+            <td class="status-pending">6</td>
+            <td>14%</td>
+        </tr>
+        <tr>
+            <td>9. Discovery & Integration</td>
+            <td>7</td>
+            <td class="status-pass">1</td>
+            <td class="status-fail">0</td>
+            <td class="status-pending">6</td>
+            <td>14%</td>
+        </tr>
+        <tr>
+            <td>10. Security & Access Control</td>
+            <td>6</td>
+            <td class="status-pass">0</td>
+            <td class="status-fail">0</td>
+            <td class="status-pending">6</td>
+            <td>0%</td>
+        </tr>
+        <tr>
+            <td>11. ACME Protocol</td>
+            <td>10</td>
+            <td class="status-pass">2</td>
+            <td class="status-fail">2</td>
+            <td class="status-pending">6</td>
+            <td>20%</td>
+        </tr>
+        <tr>
+            <td>12. ACME Monitoring</td>
+            <td>7</td>
+            <td class="status-pass">2</td>
+            <td class="status-fail">0</td>
+            <td class="status-pending">5</td>
+            <td>29%</td>
+        </tr>
+        <tr>
+            <td>13. Background Jobs</td>
+            <td>5</td>
+            <td class="status-pass">0</td>
+            <td class="status-fail">0</td>
+            <td class="status-pending">5</td>
+            <td>0%</td>
+        </tr>
+        <tr>
+            <td>14. Rate Limit Monitoring</td>
+            <td>5</td>
+            <td class="status-pass">0</td>
+            <td class="status-fail">0</td>
+            <td class="status-pending">5</td>
+            <td>0%</td>
+        </tr>
+        <tr>
+            <td>15. Health & Actuator</td>
+            <td>6</td>
+            <td class="status-pass">1</td>
+            <td class="status-fail">0</td>
+            <td class="status-pending">5</td>
+            <td>17%</td>
+        </tr>
+        <tr style="background: #e5e7eb; font-weight: bold;">
+            <td>TOTAL</td>
+            <td>107</td>
+            <td class="status-pass">12</td>
+            <td class="status-fail">3</td>
+            <td class="status-pending">92</td>
+            <td>11%</td>
+        </tr>
+    </table>
+
+    <!-- KNOWN ISSUES -->
+    <h2>Known Issues & Bugs</h2>
+    <table>
+        <tr>
+            <th>Issue ID</th>
+            <th>Section</th>
+            <th>API Endpoint</th>
+            <th>Issue Description</th>
+            <th>Root Cause</th>
+            <th>Fix Required</th>
+            <th>Priority</th>
+        </tr>
+        <tr>
+            <td>BUG-001</td>
+            <td>ACME Protocol</td>
+            <td>/api/acme/providers</td>
+            <td>500 Internal Server Error</td>
+            <td>Hibernate LazyInitializationException - no Session</td>
+            <td>Add @Transactional or use @EntityGraph</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>BUG-002</td>
+            <td>ACME Protocol</td>
+            <td>/api/acme/orders</td>
+            <td>500 Internal Server Error</td>
+            <td>Could not initialize proxy [AcmeProvider#1] - no Session</td>
+            <td>Add @Transactional, use JOIN FETCH or DTOs</td>
+            <td class="priority-high">High</td>
+        </tr>
+        <tr>
+            <td>BUG-003</td>
+            <td>Automation</td>
+            <td>/api/certificates/templates</td>
+            <td>404 Not Found</td>
+            <td>Endpoint not implemented</td>
+            <td>Implement template retrieval endpoint</td>
+            <td class="priority-medium">Medium</td>
+        </tr>
+    </table>
+
+    <div class="section-summary">
+        <strong>Document Generated:</strong> January 3, 2026<br>
+        <strong>Author:</strong> CertAxis Test Team<br>
+        <strong>Version:</strong> 1.0<br>
+        <strong>Next Review:</strong> After bug fixes are deployed
+    </div>
+</body>
+</html>
