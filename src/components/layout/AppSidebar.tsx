@@ -76,9 +76,17 @@ export function AppSidebar() {
   const isCollapsed = state === "collapsed";
   
   const isCertificateActive = certificateItems.some(item => location.pathname.startsWith(item.url));
-  const isConfigurationActive = configurationItems.some(item => location.pathname.startsWith(item.url));
+  const isConfigurationActive = configurationItems.some(item => location.pathname.startsWith(item.url) || location.pathname === "/acme-management");
   const [certificateOpen, setCertificateOpen] = useState(isCertificateActive);
   const [configurationOpen, setConfigurationOpen] = useState(isConfigurationActive);
+
+  // Auto-expand when route is active
+  const handleCertificateToggle = (open: boolean) => {
+    setCertificateOpen(open);
+  };
+  const handleConfigurationToggle = (open: boolean) => {
+    setConfigurationOpen(open);
+  };
 
   const handleLogout = () => {
     logout();
@@ -129,8 +137,11 @@ export function AppSidebar() {
           ))}
         </SidebarMenu>
 
+        {/* Spacer to push sections to bottom */}
+        <div className="flex-1" />
+
         {/* Certificate Section */}
-        <Collapsible open={certificateOpen} onOpenChange={setCertificateOpen} className="mt-4">
+        <Collapsible open={certificateOpen || isCertificateActive} onOpenChange={handleCertificateToggle} className="mt-2">
           <CollapsibleTrigger
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground w-full",
@@ -142,7 +153,7 @@ export function AppSidebar() {
             {!isCollapsed && (
               <>
                 <span className="truncate text-sm flex-1 text-left">Certificates</span>
-                <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", certificateOpen && "rotate-180")} />
+                <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", (certificateOpen || isCertificateActive) && "rotate-180")} />
               </>
             )}
           </CollapsibleTrigger>
@@ -170,7 +181,7 @@ export function AppSidebar() {
         </Collapsible>
 
         {/* Configuration Section */}
-        <Collapsible open={configurationOpen} onOpenChange={setConfigurationOpen} className="mt-2">
+        <Collapsible open={configurationOpen || isConfigurationActive} onOpenChange={handleConfigurationToggle} className="mt-2">
           <CollapsibleTrigger
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground w-full",
@@ -182,7 +193,7 @@ export function AppSidebar() {
             {!isCollapsed && (
               <>
                 <span className="truncate text-sm flex-1 text-left">Configuration</span>
-                <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", configurationOpen && "rotate-180")} />
+                <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", (configurationOpen || isConfigurationActive) && "rotate-180")} />
               </>
             )}
           </CollapsibleTrigger>
