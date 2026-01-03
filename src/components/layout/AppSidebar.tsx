@@ -11,6 +11,7 @@ import {
   Radar,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Key,
   Bell,
   Clock,
@@ -19,10 +20,11 @@ import {
   Settings,
   Zap,
   Layers,
+  FolderCog,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -34,6 +36,12 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -43,21 +51,28 @@ const navItems = [
   { title: "Network Scan", url: "/network-scan", icon: Radar },
   { title: "Discovery", url: "/discovery", icon: Search },
   { title: "ACME", url: "/acme-management", icon: Zap },
-  { title: "Bulk Operations", url: "/bulk-operations", icon: Layers },
-  { title: "Jobs", url: "/jobs", icon: Clock },
   { title: "Alerts", url: "/alerts", icon: Bell },
   { title: "API Keys", url: "/api-keys", icon: Key },
+  { title: "My Requests", url: "/workspace/my-request", icon: Briefcase },
+];
+
+const managementItems = [
+  { title: "Jobs", url: "/jobs", icon: Clock },
   { title: "Users", url: "/user-management/manage", icon: Users },
+  { title: "Bulk Operations", url: "/bulk-operations", icon: Layers },
   { title: "Reports", url: "/reports", icon: BarChart3 },
   { title: "Audit Logs", url: "/audit-logs", icon: FileText },
-  { title: "My Requests", url: "/workspace/my-request", icon: Briefcase },
 ];
 
 export function AppSidebar() {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
+  
+  const isManagementActive = managementItems.some(item => location.pathname.startsWith(item.url));
+  const [managementOpen, setManagementOpen] = useState(isManagementActive);
 
   const handleLogout = () => {
     logout();
@@ -106,6 +121,46 @@ export function AppSidebar() {
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
+
+        {/* Management Section */}
+        <Collapsible open={managementOpen} onOpenChange={setManagementOpen} className="mt-4">
+          <CollapsibleTrigger
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground w-full",
+              isCollapsed && "justify-center px-0",
+              isManagementActive && "text-sidebar-primary font-medium"
+            )}
+          >
+            <FolderCog className="h-4 w-4 shrink-0" />
+            {!isCollapsed && (
+              <>
+                <span className="truncate text-sm flex-1 text-left">Management</span>
+                <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", managementOpen && "rotate-180")} />
+              </>
+            )}
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <SidebarMenu className="gap-1 mt-1 ml-2">
+              {managementItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to={item.url}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                        isCollapsed && "justify-center px-0"
+                      )}
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      {!isCollapsed && <span className="truncate text-sm">{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </CollapsibleContent>
+        </Collapsible>
       </SidebarContent>
 
       <SidebarFooter className="flex flex-col gap-1 px-2 py-3 border-t border-sidebar-border">
