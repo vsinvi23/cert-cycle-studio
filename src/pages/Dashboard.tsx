@@ -294,29 +294,6 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Active Tenant Banner */}
-        <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
-          <CardContent className="flex items-center justify-between py-4">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
-                <Shield className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="font-semibold text-lg">Acme Corporation</h2>
-                  <Badge className="bg-green-500 text-white text-xs">Active</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">acme.certaxis.io • Enterprise Plan</p>
-              </div>
-            </div>
-            <Link to="/settings">
-              <Button variant="outline" size="sm">
-                Manage Tenant
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
