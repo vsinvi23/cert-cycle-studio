@@ -21,6 +21,7 @@ import {
   Zap,
   Layers,
   FolderCog,
+  Award,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -45,21 +46,24 @@ import {
 
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "ACME", url: "/acme-management", icon: Zap },
+  { title: "Alerts", url: "/alerts", icon: Bell },
+  { title: "My Requests", url: "/workspace/my-request", icon: Briefcase },
+];
+
+const certificateItems = [
   { title: "Certificates", url: "/ca-management/view", icon: FileKey },
   { title: "Issue Certificate", url: "/certificate-management/issue", icon: ShieldPlus },
   { title: "Renewals", url: "/renewals", icon: RefreshCw },
   { title: "Network Scan", url: "/network-scan", icon: Radar },
   { title: "Discovery", url: "/discovery", icon: Search },
-  { title: "ACME", url: "/acme-management", icon: Zap },
-  { title: "Alerts", url: "/alerts", icon: Bell },
-  { title: "API Keys", url: "/api-keys", icon: Key },
-  { title: "My Requests", url: "/workspace/my-request", icon: Briefcase },
 ];
 
 const managementItems = [
   { title: "Jobs", url: "/jobs", icon: Clock },
   { title: "Users", url: "/user-management/manage", icon: Users },
   { title: "Bulk Operations", url: "/bulk-operations", icon: Layers },
+  { title: "API Keys", url: "/api-keys", icon: Key },
   { title: "Reports", url: "/reports", icon: BarChart3 },
   { title: "Audit Logs", url: "/audit-logs", icon: FileText },
 ];
@@ -71,13 +75,16 @@ export function AppSidebar() {
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   
+  const isCertificateActive = certificateItems.some(item => location.pathname.startsWith(item.url));
   const isManagementActive = managementItems.some(item => location.pathname.startsWith(item.url));
+  const [certificateOpen, setCertificateOpen] = useState(isCertificateActive);
   const [managementOpen, setManagementOpen] = useState(isManagementActive);
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
+
 
   return (
     <Sidebar 
@@ -122,8 +129,48 @@ export function AppSidebar() {
           ))}
         </SidebarMenu>
 
+        {/* Certificate Section */}
+        <Collapsible open={certificateOpen} onOpenChange={setCertificateOpen} className="mt-4">
+          <CollapsibleTrigger
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground w-full",
+              isCollapsed && "justify-center px-0",
+              isCertificateActive && "text-sidebar-primary font-medium"
+            )}
+          >
+            <Award className="h-4 w-4 shrink-0" />
+            {!isCollapsed && (
+              <>
+                <span className="truncate text-sm flex-1 text-left">Certificates</span>
+                <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", certificateOpen && "rotate-180")} />
+              </>
+            )}
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <SidebarMenu className="gap-1 mt-1 ml-2">
+              {certificateItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to={item.url}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                        isCollapsed && "justify-center px-0"
+                      )}
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      {!isCollapsed && <span className="truncate text-sm">{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </CollapsibleContent>
+        </Collapsible>
+
         {/* Management Section */}
-        <Collapsible open={managementOpen} onOpenChange={setManagementOpen} className="mt-4">
+        <Collapsible open={managementOpen} onOpenChange={setManagementOpen} className="mt-2">
           <CollapsibleTrigger
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground w-full",
