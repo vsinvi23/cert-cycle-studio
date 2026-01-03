@@ -76,16 +76,13 @@ export function AppSidebar() {
   const isCollapsed = state === "collapsed";
   
   const isCertificateActive = certificateItems.some(item => location.pathname.startsWith(item.url));
-  const isConfigurationActive = configurationItems.some(item => location.pathname.startsWith(item.url) || location.pathname === "/acme-management");
-  const [certificateOpen, setCertificateOpen] = useState(isCertificateActive);
-  const [configurationOpen, setConfigurationOpen] = useState(isConfigurationActive);
+  const isConfigurationActive = configurationItems.some(item => location.pathname.startsWith(item.url));
+  const [activeSection, setActiveSection] = useState<"certificates" | "configuration" | null>(
+    isCertificateActive ? "certificates" : isConfigurationActive ? "configuration" : null
+  );
 
-  // Auto-expand when route is active
-  const handleCertificateToggle = (open: boolean) => {
-    setCertificateOpen(open);
-  };
-  const handleConfigurationToggle = (open: boolean) => {
-    setConfigurationOpen(open);
+  const handleSectionClick = (section: "certificates" | "configuration") => {
+    setActiveSection(activeSection === section ? null : section);
   };
 
   const handleLogout = () => {
@@ -137,88 +134,90 @@ export function AppSidebar() {
           ))}
         </SidebarMenu>
 
-        {/* Spacer to push sections to bottom */}
+        {/* Expanded Certificate Items - shown below My Requests when Certificates is active */}
+        {(activeSection === "certificates" || isCertificateActive) && (
+          <SidebarMenu className="gap-1 mt-2 ml-2 border-l border-sidebar-border pl-2">
+            {certificateItems.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton asChild>
+                  <NavLink
+                    to={item.url}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                      isCollapsed && "justify-center px-0"
+                    )}
+                    activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                  >
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    {!isCollapsed && <span className="truncate text-sm">{item.title}</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        )}
+
+        {/* Expanded Configuration Items - shown below My Requests when Configuration is active */}
+        {(activeSection === "configuration" || isConfigurationActive) && (
+          <SidebarMenu className="gap-1 mt-2 ml-2 border-l border-sidebar-border pl-2">
+            {configurationItems.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton asChild>
+                  <NavLink
+                    to={item.url}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                      isCollapsed && "justify-center px-0"
+                    )}
+                    activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                  >
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    {!isCollapsed && <span className="truncate text-sm">{item.title}</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        )}
+
+        {/* Spacer to push section buttons to bottom */}
         <div className="flex-1" />
 
-        {/* Certificate Section */}
-        <Collapsible open={certificateOpen || isCertificateActive} onOpenChange={handleCertificateToggle} className="mt-2">
-          <CollapsibleTrigger
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground w-full",
-              isCollapsed && "justify-center px-0",
-              isCertificateActive && "text-sidebar-primary font-medium"
-            )}
-          >
-            <Award className="h-4 w-4 shrink-0" />
-            {!isCollapsed && (
-              <>
-                <span className="truncate text-sm flex-1 text-left">Certificates</span>
-                <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", (certificateOpen || isCertificateActive) && "rotate-180")} />
-              </>
-            )}
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <SidebarMenu className="gap-1 mt-1 ml-2">
-              {certificateItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                        isCollapsed && "justify-center px-0"
-                      )}
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                    >
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      {!isCollapsed && <span className="truncate text-sm">{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </CollapsibleContent>
-        </Collapsible>
+        {/* Certificate Section Button */}
+        <button
+          onClick={() => handleSectionClick("certificates")}
+          className={cn(
+            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground w-full mt-2",
+            isCollapsed && "justify-center px-0",
+            (activeSection === "certificates" || isCertificateActive) && "bg-sidebar-accent text-sidebar-primary font-medium"
+          )}
+        >
+          <Award className="h-4 w-4 shrink-0" />
+          {!isCollapsed && (
+            <>
+              <span className="truncate text-sm flex-1 text-left">Certificates</span>
+              <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", (activeSection === "certificates" || isCertificateActive) && "rotate-180")} />
+            </>
+          )}
+        </button>
 
-        {/* Configuration Section */}
-        <Collapsible open={configurationOpen || isConfigurationActive} onOpenChange={handleConfigurationToggle} className="mt-2">
-          <CollapsibleTrigger
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground w-full",
-              isCollapsed && "justify-center px-0",
-              isConfigurationActive && "text-sidebar-primary font-medium"
-            )}
-          >
-            <FolderCog className="h-4 w-4 shrink-0" />
-            {!isCollapsed && (
-              <>
-                <span className="truncate text-sm flex-1 text-left">Configuration</span>
-                <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", (configurationOpen || isConfigurationActive) && "rotate-180")} />
-              </>
-            )}
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <SidebarMenu className="gap-1 mt-1 ml-2">
-              {configurationItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                        isCollapsed && "justify-center px-0"
-                      )}
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                    >
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      {!isCollapsed && <span className="truncate text-sm">{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </CollapsibleContent>
-        </Collapsible>
+        {/* Configuration Section Button */}
+        <button
+          onClick={() => handleSectionClick("configuration")}
+          className={cn(
+            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground w-full mt-1",
+            isCollapsed && "justify-center px-0",
+            (activeSection === "configuration" || isConfigurationActive) && "bg-sidebar-accent text-sidebar-primary font-medium"
+          )}
+        >
+          <FolderCog className="h-4 w-4 shrink-0" />
+          {!isCollapsed && (
+            <>
+              <span className="truncate text-sm flex-1 text-left">Configuration</span>
+              <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", (activeSection === "configuration" || isConfigurationActive) && "rotate-180")} />
+            </>
+          )}
+        </button>
       </SidebarContent>
 
       <SidebarFooter className="flex flex-col gap-1 px-2 py-3 border-t border-sidebar-border">
