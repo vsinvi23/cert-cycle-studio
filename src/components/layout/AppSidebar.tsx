@@ -47,7 +47,6 @@ import {
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "ACME", url: "/acme-management", icon: Zap },
-  { title: "Alerts", url: "/alerts", icon: Bell },
   { title: "My Requests", url: "/workspace/my-request", icon: Briefcase },
 ];
 
@@ -59,7 +58,8 @@ const certificateItems = [
   { title: "Discovery", url: "/discovery", icon: Search },
 ];
 
-const managementItems = [
+const configurationItems = [
+  { title: "Alerts", url: "/alerts", icon: Bell },
   { title: "Jobs", url: "/jobs", icon: Clock },
   { title: "Users", url: "/user-management/manage", icon: Users },
   { title: "Bulk Operations", url: "/bulk-operations", icon: Layers },
@@ -76,9 +76,9 @@ export function AppSidebar() {
   const isCollapsed = state === "collapsed";
   
   const isCertificateActive = certificateItems.some(item => location.pathname.startsWith(item.url));
-  const isManagementActive = managementItems.some(item => location.pathname.startsWith(item.url));
+  const isConfigurationActive = configurationItems.some(item => location.pathname.startsWith(item.url));
   const [certificateOpen, setCertificateOpen] = useState(isCertificateActive);
-  const [managementOpen, setManagementOpen] = useState(isManagementActive);
+  const [configurationOpen, setConfigurationOpen] = useState(isConfigurationActive);
 
   const handleLogout = () => {
     logout();
@@ -169,26 +169,26 @@ export function AppSidebar() {
           </CollapsibleContent>
         </Collapsible>
 
-        {/* Management Section */}
-        <Collapsible open={managementOpen} onOpenChange={setManagementOpen} className="mt-2">
+        {/* Configuration Section */}
+        <Collapsible open={configurationOpen} onOpenChange={setConfigurationOpen} className="mt-2">
           <CollapsibleTrigger
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground w-full",
               isCollapsed && "justify-center px-0",
-              isManagementActive && "text-sidebar-primary font-medium"
+              isConfigurationActive && "text-sidebar-primary font-medium"
             )}
           >
             <FolderCog className="h-4 w-4 shrink-0" />
             {!isCollapsed && (
               <>
-                <span className="truncate text-sm flex-1 text-left">Management</span>
-                <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", managementOpen && "rotate-180")} />
+                <span className="truncate text-sm flex-1 text-left">Configuration</span>
+                <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", configurationOpen && "rotate-180")} />
               </>
             )}
           </CollapsibleTrigger>
           <CollapsibleContent>
             <SidebarMenu className="gap-1 mt-1 ml-2">
-              {managementItems.map((item) => (
+              {configurationItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
