@@ -46,7 +46,6 @@ import {
 
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "ACME", url: "/acme-management", icon: Zap },
   { title: "My Requests", url: "/workspace/my-request", icon: Briefcase },
 ];
 
@@ -59,6 +58,7 @@ const certificateItems = [
 ];
 
 const configurationItems = [
+  { title: "ACME", url: "/acme-management", icon: Zap },
   { title: "Alerts", url: "/alerts", icon: Bell },
   { title: "Jobs", url: "/jobs", icon: Clock },
   { title: "Users", url: "/user-management/manage", icon: Users },
