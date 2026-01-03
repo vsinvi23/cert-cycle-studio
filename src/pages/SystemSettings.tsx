@@ -9,7 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Settings, Mail, Shield, Database, Bell, Key, Clock, Server, RefreshCw, Save } from "lucide-react";
+import { Settings, Mail, Shield, Database, Bell, Key, Clock, Server, RefreshCw, Save, Building2, CheckCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export default function SystemSettings() {
   const [settings, setSettings] = useState({
@@ -49,7 +50,21 @@ export default function SystemSettings() {
     redisHost: "localhost",
     redisPort: 6379,
     cacheTtl: 300,
+
+    // Tenant
+    tenantName: "Acme Corporation",
+    tenantId: "tenant-001",
+    tenantDomain: "acme.certaxis.io",
+    tenantPlan: "Enterprise",
+    tenantMaxCertificates: 10000,
+    tenantMaxUsers: 500,
   });
+
+  const tenants = [
+    { id: "tenant-001", name: "Acme Corporation", domain: "acme.certaxis.io", plan: "Enterprise", status: "active" },
+    { id: "tenant-002", name: "TechStart Inc", domain: "techstart.certaxis.io", plan: "Professional", status: "active" },
+    { id: "tenant-003", name: "Global Systems", domain: "global.certaxis.io", plan: "Enterprise", status: "active" },
+  ];
 
   const handleSave = async (section: string) => {
     try {
@@ -69,8 +84,9 @@ export default function SystemSettings() {
           </p>
         </div>
 
-        <Tabs defaultValue="general">
-          <TabsList className="grid w-full grid-cols-6">
+        <Tabs defaultValue="tenant">
+          <TabsList className="grid w-full grid-cols-7">
+            <TabsTrigger value="tenant"><Building2 className="h-4 w-4 mr-2" />Tenant</TabsTrigger>
             <TabsTrigger value="general"><Settings className="h-4 w-4 mr-2" />General</TabsTrigger>
             <TabsTrigger value="email"><Mail className="h-4 w-4 mr-2" />Email</TabsTrigger>
             <TabsTrigger value="security"><Shield className="h-4 w-4 mr-2" />Security</TabsTrigger>
@@ -78,6 +94,128 @@ export default function SystemSettings() {
             <TabsTrigger value="ratelimit"><Clock className="h-4 w-4 mr-2" />Rate Limits</TabsTrigger>
             <TabsTrigger value="cache"><Database className="h-4 w-4 mr-2" />Cache</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="tenant" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Tenant Configuration</CardTitle>
+                <CardDescription>View and manage tenant settings</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <h4 className="font-medium">Active Tenant</h4>
+                  <div className="rounded-lg border p-4 bg-primary/5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
+                          <Building2 className="h-5 w-5 text-primary-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-semibold">{settings.tenantName}</p>
+                          <p className="text-sm text-muted-foreground">{settings.tenantDomain}</p>
+                        </div>
+                      </div>
+                      <Badge className="bg-green-500 text-white">Active</Badge>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Tenant ID</p>
+                        <p className="font-mono text-sm">{settings.tenantId}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Plan</p>
+                        <p className="font-medium">{settings.tenantPlan}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Max Certificates</p>
+                        <p className="font-medium">{settings.tenantMaxCertificates.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <h4 className="font-medium">Tenant Settings</h4>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Tenant Name</Label>
+                      <Input
+                        value={settings.tenantName}
+                        onChange={(e) => setSettings({ ...settings, tenantName: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Domain</Label>
+                      <Input
+                        value={settings.tenantDomain}
+                        onChange={(e) => setSettings({ ...settings, tenantDomain: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Max Certificates</Label>
+                      <Input
+                        type="number"
+                        value={settings.tenantMaxCertificates}
+                        onChange={(e) => setSettings({ ...settings, tenantMaxCertificates: parseInt(e.target.value) })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Max Users</Label>
+                      <Input
+                        type="number"
+                        value={settings.tenantMaxUsers}
+                        onChange={(e) => setSettings({ ...settings, tenantMaxUsers: parseInt(e.target.value) })}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <h4 className="font-medium">Available Tenants</h4>
+                  <div className="space-y-2">
+                    {tenants.map((tenant) => (
+                      <div
+                        key={tenant.id}
+                        className={`flex items-center justify-between rounded-lg border p-3 cursor-pointer transition-colors hover:bg-muted/50 ${
+                          tenant.id === settings.tenantId ? "border-primary bg-primary/5" : ""
+                        }`}
+                        onClick={() => setSettings({ 
+                          ...settings, 
+                          tenantId: tenant.id, 
+                          tenantName: tenant.name, 
+                          tenantDomain: tenant.domain,
+                          tenantPlan: tenant.plan
+                        })}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="font-medium">{tenant.name}</p>
+                            <p className="text-sm text-muted-foreground">{tenant.domain}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{tenant.plan}</Badge>
+                          {tenant.id === settings.tenantId && (
+                            <CheckCircle className="h-4 w-4 text-primary" />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Button onClick={() => handleSave("Tenant")}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="general" className="space-y-4">
             <Card>
