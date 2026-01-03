@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Bell, Settings, SlidersHorizontal, X, Building2, ChevronDown, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
+import { DEFAULT_TENANTS, type TenantConfig } from "@/lib/api/apiConfig";
 import {
   Popover,
   PopoverContent,
@@ -26,23 +27,41 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-
-const tenants = [
-  { id: "tenant-001", name: "Acme Corporation", domain: "acme.certaxis.io", plan: "Enterprise" },
-  { id: "tenant-002", name: "TechStart Inc", domain: "techstart.certaxis.io", plan: "Professional" },
-  { id: "tenant-003", name: "Global Systems", domain: "global.certaxis.io", plan: "Enterprise" },
-];
+import { toast } from "@/hooks/use-toast";
 
 export function AppHeader() {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [activeTenant, setActiveTenant] = useState(tenants[0]);
+  const [tenants, setTenants] = useState<TenantConfig[]>(DEFAULT_TENANTS);
+  const [activeTenant, setActiveTenant] = useState<TenantConfig | null>(null);
   const [filters, setFilters] = useState({
     type: "all",
     status: "all",
     dateRange: "all",
   });
+
+  // Initialize active tenant from localStorage or default
+  useEffect(() => {
+    const savedTenantId = localStorage.getItem("activeTenantId");
+    if (savedTenantId) {
+      const saved = tenants.find(t => t.id === savedTenantId);
+      if (saved) {
+        setActiveTenant(saved);
+        return;
+      }
+    }
+    setActiveTenant(tenants[0]);
+  }, [tenants]);
+
+  const handleTenantChange = (tenant: TenantConfig) => {
+    setActiveTenant(tenant);
+    localStorage.setItem("activeTenantId", tenant.id);
+    toast({
+      title: "Tenant Switched",
+      description: `Now using ${tenant.name}`,
+    });
+  };
   
   const initials = user?.name
     ?.split(" ")
@@ -58,50 +77,53 @@ export function AppHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-card px-6">
+    <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b bg-card px-6">
       {/* Tenant Selector */}
-      <div className="flex-1">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-3 px-3 py-2 h-auto hover:bg-secondary">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                <Building2 className="h-4 w-4 text-primary-foreground" />
-              </div>
-              <div className="text-left hidden sm:block">
-                <p className="text-sm font-medium">{activeTenant.name}</p>
-                <p className="text-xs text-muted-foreground">{activeTenant.domain}</p>
-              </div>
-              <ChevronDown className="h-4 w-4 text-muted-foreground ml-1" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-72 bg-popover z-50">
-            <DropdownMenuLabel>Switch Tenant</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {tenants.map((tenant) => (
-              <DropdownMenuItem
-                key={tenant.id}
-                onClick={() => setActiveTenant(tenant)}
-                className="flex items-center justify-between cursor-pointer py-3"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{tenant.name}</p>
-                    <p className="text-xs text-muted-foreground">{tenant.domain}</p>
-                  </div>
+      <div className="flex-shrink-0">
+        {activeTenant && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-3 px-3 py-2 h-auto border-border bg-background hover:bg-secondary">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+                  <Building2 className="h-4 w-4 text-primary-foreground" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs">{tenant.plan}</Badge>
-                  {tenant.id === activeTenant.id && (
-                    <Check className="h-4 w-4 text-primary" />
-                  )}
+                <div className="text-left hidden sm:block">
+                  <p className="text-sm font-medium text-foreground">{activeTenant.name}</p>
+                  <p className="text-xs text-muted-foreground">{activeTenant.domain}</p>
                 </div>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+                <Badge variant="secondary" className="hidden md:flex text-xs ml-1">{activeTenant.plan}</Badge>
+                <ChevronDown className="h-4 w-4 text-muted-foreground ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-80 bg-popover border border-border shadow-lg z-[100]" sideOffset={5}>
+              <DropdownMenuLabel className="text-foreground">Switch Tenant</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {tenants.map((tenant) => (
+                <DropdownMenuItem
+                  key={tenant.id}
+                  onClick={() => handleTenantChange(tenant)}
+                  className="flex items-center justify-between cursor-pointer py-3 focus:bg-accent"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{tenant.name}</p>
+                      <p className="text-xs text-muted-foreground">{tenant.domain}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">{tenant.plan}</Badge>
+                    {activeTenant && tenant.id === activeTenant.id && (
+                      <Check className="h-4 w-4 text-primary" />
+                    )}
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
       
       {/* Centered search with advanced filters */}
