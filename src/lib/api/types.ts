@@ -150,9 +150,14 @@ export type RevokeReason =
   | "CESSATION_OF_OPERATION";
 
 // Nmap Certificate Scan
+export interface NmapTargetRequest {
+  host: string;
+  port?: number;
+}
+
 export interface NmapScanRequest {
-  targets: string[] | string;
-  ports?: number[] | string;
+  targets: NmapTargetRequest[];
+  ports?: string;
 }
 
 export interface NmapCertificateScan {

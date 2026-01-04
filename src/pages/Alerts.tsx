@@ -48,7 +48,11 @@ export default function Alerts() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const historyData = await alertsApi.getHistory();
+      const [configData, historyData] = await Promise.all([
+        alertsApi.getConfigurations().catch(() => []),
+        alertsApi.getHistory(),
+      ]);
+      setAlerts(configData || []);
       setHistory(historyData || []);
     } catch (error) {
       console.error("Failed to fetch alerts:", error);
@@ -320,10 +324,44 @@ export default function Alerts() {
               <CardDescription>Manage your alert rules and delivery channels</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center text-muted-foreground py-8">
-                <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Click "Create Alert" to set up your first alert configuration</p>
-              </div>
+              {alerts.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Click "Create Alert" to set up your first alert configuration</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Threshold</TableHead>
+                      <TableHead>Recipients</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {alerts.filter(a => 
+                      a.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      a.alertType?.toLowerCase().includes(searchQuery.toLowerCase())
+                    ).map((alert) => (
+                      <TableRow key={alert.id}>
+                        <TableCell className="font-medium">{alert.name}</TableCell>
+                        <TableCell>{getAlertTypeBadge(alert.alertType)}</TableCell>
+                        <TableCell>{alert.thresholdDays ? `${alert.thresholdDays} days` : "-"}</TableCell>
+                        <TableCell className="max-w-xs truncate">{alert.emailRecipients || "-"}</TableCell>
+                        <TableCell>
+                          <Badge className={alert.enabled ? "bg-green-500/10 text-green-500" : "bg-gray-500/10 text-gray-500"}>
+                            {alert.enabled ? "Enabled" : "Disabled"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{new Date(alert.createdAt).toLocaleDateString()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         )}

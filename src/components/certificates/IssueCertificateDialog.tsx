@@ -451,10 +451,19 @@ export function IssueCertificateDialog({ onSuccess }: IssueCertificateDialogProp
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button type="submit">Submit Request</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  "Submit Request"
+                )}
+              </Button>
             </div>
           </form>
         </Form>

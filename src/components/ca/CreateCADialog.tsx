@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { caApi } from "@/lib/api";
 
 const signatureAlgorithms = [
   { value: "RSA2048", label: "RSA 2048" },
@@ -58,6 +59,7 @@ interface CreateCADialogProps {
 
 export function CreateCADialog({ onSuccess }: CreateCADialogProps) {
   const [open, setOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<CreateCAFormValues>({
     resolver: zodResolver(createCASchema),
@@ -74,16 +76,47 @@ export function CreateCADialog({ onSuccess }: CreateCADialogProps) {
     },
   });
 
-  const onSubmit = (data: CreateCAFormValues) => {
-    // TODO: Integrate with REST API
-    console.log("Create CA:", data);
-    toast({
-      title: "CA Created",
-      description: `Certificate Authority "${data.commonName}" created successfully.`,
-    });
-    form.reset();
-    setOpen(false);
-    onSuccess?.();
+  const getAlgorithmAndKeySize = (signatureAlgorithm: string): { algorithm: "RSA" | "ECDSA"; keySize: number } => {
+    switch (signatureAlgorithm) {
+      case "RSA2048": return { algorithm: "RSA", keySize: 2048 };
+      case "RSA3072": return { algorithm: "RSA", keySize: 3072 };
+      case "RSA4096": return { algorithm: "RSA", keySize: 4096 };
+      case "ECDSA_P256": return { algorithm: "ECDSA", keySize: 256 };
+      case "ECDSA_P384": return { algorithm: "ECDSA", keySize: 384 };
+      default: return { algorithm: "RSA", keySize: 2048 };
+    }
+  };
+
+  const onSubmit = async (data: CreateCAFormValues) => {
+    setIsLoading(true);
+    try {
+      const { algorithm, keySize } = getAlgorithmAndKeySize(data.signatureAlgorithm);
+      
+      await caApi.create({
+        alias: data.alias,
+        cn: data.commonName,
+        algorithm,
+        keySize,
+        validityDays: data.validityInDays,
+      });
+      
+      toast({
+        title: "CA Created",
+        description: `Certificate Authority "${data.commonName}" created successfully.`,
+      });
+      form.reset();
+      setOpen(false);
+      onSuccess?.();
+    } catch (error) {
+      console.error("Failed to create CA:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create Certificate Authority. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -244,10 +277,19 @@ export function CreateCADialog({ onSuccess }: CreateCADialogProps) {
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
                 Cancel
               </Button>
-              <Button type="submit">Create CA</Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create CA"
+                )}
+              </Button>
             </div>
           </form>
         </Form>

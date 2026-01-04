@@ -71,6 +71,14 @@ export const securityApi = {
   // ==================== API KEYS ====================
 
   /**
+   * GET /api/security/api-keys
+   * Get all API keys
+   */
+  getApiKeys: async (): Promise<import("./types").ApiKey[]> => {
+    return apiRequest<import("./types").ApiKey[]>("/api/security/api-keys");
+  },
+
+  /**
    * POST /api/security/api-keys/generate
    * Generate secure API key
    */
@@ -78,6 +86,16 @@ export const securityApi = {
     return apiRequest<CreateApiKeyResponse>("/api/security/api-keys/generate", {
       method: "POST",
       body: JSON.stringify(config),
+    });
+  },
+
+  /**
+   * DELETE /api/security/api-keys/{id}
+   * Revoke an API key
+   */
+  revokeApiKey: async (keyId: number): Promise<void> => {
+    return apiRequest<void>(`/api/security/api-keys/${keyId}`, {
+      method: "DELETE",
     });
   },
 
