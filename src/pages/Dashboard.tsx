@@ -43,94 +43,39 @@ import {
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-// AI Insights Mock Data
-const renewalPredictions = [
-  {
-    id: 1,
-    certificateName: "api.example.com",
-    domain: "example.com",
-    expiryDate: "2025-02-15",
-    riskScore: 85,
-    failureProbability: 0.72,
-    trigger: "Daily batch run",
-    recommendedActions: [
-      "Verify DNS records are accessible",
-      "Check ACME account credentials",
-      "Ensure port 80/443 is open for validation"
-    ],
-    factors: [
-      { name: "Previous failure history", impact: "High" },
-      { name: "DNS propagation issues", impact: "Medium" },
-      { name: "Rate limit approaching", impact: "Low" }
-    ]
-  },
-  {
-    id: 2,
-    certificateName: "mail.company.org",
-    domain: "company.org",
-    expiryDate: "2025-02-20",
-    riskScore: 45,
-    failureProbability: 0.28,
-    trigger: "Config change",
-    recommendedActions: ["Review recent configuration changes"],
-    factors: [{ name: "Config modification", impact: "Medium" }]
-  },
-  {
-    id: 3,
-    certificateName: "cdn.webapp.io",
-    domain: "webapp.io",
-    expiryDate: "2025-02-25",
-    riskScore: 15,
-    failureProbability: 0.08,
-    trigger: "New renewal attempt",
-    recommendedActions: ["No immediate action required"],
-    factors: [{ name: "Standard renewal cycle", impact: "Low" }]
-  }
-];
+// AI Insights types
+interface RenewalPrediction {
+  id: number;
+  certificateName: string;
+  domain: string;
+  expiryDate: string;
+  riskScore: number;
+  failureProbability: number;
+  trigger: string;
+  recommendedActions: string[];
+  factors: Array<{ name: string; impact: string }>;
+}
 
-const initialAnomalies = [
-  {
-    id: 1,
-    type: "Issuance spike",
-    description: "47 certificates issued in the last hour vs avg 5/hour",
-    severity: "high",
-    detectedAt: "2025-01-02T10:30:00Z",
-    affectedDomains: ["*.example.com"],
-    status: "active"
-  },
-  {
-    id: 2,
-    type: "Domain pattern anomaly",
-    description: "Sequential subdomains detected (test1, test2, test3...)",
-    severity: "medium",
-    detectedAt: "2025-01-02T09:15:00Z",
-    affectedDomains: ["test1.example.com", "test2.example.com"],
-    status: "active"
-  }
-];
+interface Anomaly {
+  id: number;
+  type: string;
+  description: string;
+  severity: string;
+  detectedAt: string;
+  affectedDomains: string[];
+  status: string;
+}
 
-const policyDrifts = [
-  {
-    id: 1,
-    rule: "Manual override threshold exceeded",
-    description: "25% of renewals manually overridden (threshold: 20%)",
-    current: "25%",
-    suggestedTemplate: {
-      name: "Flexible Renewal Policy",
-      rules: ["Allow renewal 45 days before expiry", "Auto-approve for verified domains"]
-    }
-  },
-  {
-    id: 2,
-    rule: "Repeated exception pattern",
-    description: "Same exception applied 5 times in 30 days",
-    current: "5 times",
-    suggestedTemplate: {
-      name: "Streamlined EV Policy",
-      rules: ["Auto-approve EV bypass for internal domains"]
-    }
-  }
-];
+interface PolicyDrift {
+  id: number;
+  rule: string;
+  description: string;
+  current: string;
+  suggestedTemplate: {
+    name: string;
+    rules: string[];
+  };
+}
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
@@ -142,10 +87,12 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // AI Insights state
-  const [anomalies, setAnomalies] = useState(initialAnomalies);
-  const [selectedPrediction, setSelectedPrediction] = useState<typeof renewalPredictions[0] | null>(null);
-  const [selectedDrift, setSelectedDrift] = useState<typeof policyDrifts[0] | null>(null);
+  // AI Insights state - fetched from API (empty by default, populated if API available)
+  const [renewalPredictions, setRenewalPredictions] = useState<RenewalPrediction[]>([]);
+  const [anomalies, setAnomalies] = useState<Anomaly[]>([]);
+  const [policyDrifts, setPolicyDrifts] = useState<PolicyDrift[]>([]);
+  const [selectedPrediction, setSelectedPrediction] = useState<RenewalPrediction | null>(null);
+  const [selectedDrift, setSelectedDrift] = useState<PolicyDrift | null>(null);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);

@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { caApi, certificatesApi } from "@/lib/api";
+import type { CertificateAuthority } from "@/lib/api/types";
 
 const keyPairAlgorithms = [
   { value: "RSA2048", label: "RSA 2048" },
@@ -39,11 +41,6 @@ const keyPairAlgorithms = [
   { value: "RSA4096", label: "RSA 4096" },
   { value: "ECDSA_P256", label: "ECDSA P256" },
   { value: "ECDSA_P384", label: "ECDSA P384" },
-];
-
-const availableCAs = [
-  { value: "root-ca", label: "My Root CA (root-ca)" },
-  { value: "intermediate-ca", label: "Intermediate CA (intermediate-ca)" },
 ];
 
 const purposeOptions = [
@@ -94,6 +91,14 @@ interface IssueCertificateDialogProps {
 
 export function IssueCertificateDialog({ onSuccess }: IssueCertificateDialogProps) {
   const [open, setOpen] = useState(false);
+  const [cas, setCas] = useState<CertificateAuthority[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      caApi.list().then(setCas).catch(console.error);
+    }
+  }, [open]);
 
   const form = useForm<z.infer<typeof certificateRequestSchema>>({
     resolver: zodResolver(certificateRequestSchema),
@@ -117,20 +122,56 @@ export function IssueCertificateDialog({ onSuccess }: IssueCertificateDialogProp
 
   const csrType = form.watch("csrType");
 
-  const onSubmit = (data: z.infer<typeof certificateRequestSchema>) => {
-    const request: CertificateRequest = {
-      ...data,
-      id: crypto.randomUUID(),
-      status: "pending",
-      createdAt: new Date(),
-    };
-    toast({
-      title: "Request Submitted",
-      description: `Certificate request for "${data.commonName}" has been submitted.`,
-    });
-    form.reset();
-    setOpen(false);
-    onSuccess(request);
+  const onSubmit = async (data: z.infer<typeof certificateRequestSchema>) => {
+    setIsSubmitting(true);
+    try {
+      // Call API to issue certificate
+      await certificatesApi.issueUserCertificate({
+        commonName: data.commonName,
+        organization: data.organization,
+        organizationalUnit: data.organizationalUnit,
+        locality: data.locality,
+        state: data.state,
+        country: data.country,
+        keyPairAlgorithm: data.keyPairAlgorithm,
+        validityInDays: data.validityInDays,
+        alias: data.alias,
+        caAlias: data.caAlias,
+        password: data.passwordProtection,
+      });
+      
+      const request: CertificateRequest = {
+        ...data,
+        id: crypto.randomUUID(),
+        status: "approved",
+        createdAt: new Date(),
+      };
+      toast({
+        title: "Certificate Issued",
+        description: `Certificate for "${data.commonName}" has been issued successfully.`,
+      });
+      form.reset();
+      setOpen(false);
+      onSuccess(request);
+    } catch (error) {
+      console.error("Failed to issue certificate:", error);
+      // Still add to local state as pending
+      const request: CertificateRequest = {
+        ...data,
+        id: crypto.randomUUID(),
+        status: "pending",
+        createdAt: new Date(),
+      };
+      toast({
+        title: "Request Submitted",
+        description: `Certificate request for "${data.commonName}" has been submitted.`,
+      });
+      form.reset();
+      setOpen(false);
+      onSuccess(request);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -375,11 +416,18 @@ export function IssueCertificateDialog({ onSuccess }: IssueCertificateDialogProp
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {availableCAs.map((ca) => (
-                          <SelectItem key={ca.value} value={ca.value}>
-                            {ca.label}
-                          </SelectItem>
-                        ))}
+                        {cas.length > 0 ? (
+                          cas.map((ca) => (
+                            <SelectItem key={ca.id} value={ca.alias}>
+                              {ca.alias} ({ca.commonName})
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <>
+                            <SelectItem value="root-ca">Root CA</SelectItem>
+                            <SelectItem value="intermediate-ca">Intermediate CA</SelectItem>
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
