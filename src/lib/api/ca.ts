@@ -1,9 +1,7 @@
 import { apiRequest } from "./config";
 import type { 
   CertificateAuthority, 
-  CreateCARequest, 
-  ImportCARequest,
-  PaginatedResponse 
+  CreateCARequest
 } from "./types";
 
 export const caApi = {
@@ -42,10 +40,14 @@ export const caApi = {
    * POST /api/ca/import
    * Import external CA certificate
    */
-  import: async (request: ImportCARequest): Promise<string> => {
-    return apiRequest<string>("/api/ca/import", {
+  import: async (alias: string, certificate: string, privateKey?: string, keyPassword?: string): Promise<string> => {
+    const params = new URLSearchParams();
+    params.append("alias", alias);
+    if (keyPassword) params.append("keyPassword", keyPassword);
+    
+    return apiRequest<string>(`/api/ca/import?${params.toString()}`, {
       method: "POST",
-      body: JSON.stringify(request),
+      body: JSON.stringify({ certificate, privateKey }),
     });
   },
 

@@ -209,10 +209,13 @@ export const integrationsApi = {
    * POST /api/integrations/acme/configure
    * Configure ACME integration
    */
-  configureAcme: async (config: { provider?: string; email: string; autoRenew?: boolean }): Promise<string> => {
-    return apiRequest<string>("/api/integrations/acme/configure", {
+  configureAcme: async (email: string, acmeServerUrl?: string): Promise<string> => {
+    const params = new URLSearchParams();
+    params.append("email", email);
+    if (acmeServerUrl) params.append("acmeServerUrl", acmeServerUrl);
+    
+    return apiRequest<string>(`/api/integrations/acme/configure?${params.toString()}`, {
       method: "POST",
-      body: JSON.stringify(config),
     });
   },
 

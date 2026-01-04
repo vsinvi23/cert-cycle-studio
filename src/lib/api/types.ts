@@ -180,15 +180,20 @@ export interface NmapCertificateScan {
 export interface CreateCARequest {
   alias: string;
   cn: string;
-  algorithm?: "RSA" | "ECDSA";
-  keySize?: number;
-  validityDays?: number;
+  organization?: string;
+  organizationalUnit?: string;
+  locality?: string;
+  state?: string;
+  country?: string;
+  signatureAlgorithm?: string;
+  validityInDays?: number;
 }
 
 export interface ImportCARequest {
   alias: string;
   certificate: string;
   privateKey?: string;
+  keyPassword?: string;
 }
 
 export interface CertificateAuthority {
@@ -551,10 +556,11 @@ export interface CreateAcmeProviderRequest {
   name: string;
   type: "LETS_ENCRYPT_PRODUCTION" | "LETS_ENCRYPT_STAGING" | "ZEROSSL" | "BUYPASS" | "CUSTOM";
   directoryUrl?: string;
-  providerType?: "LETS_ENCRYPT" | "ZEROSSL" | "BUYPASS" | "GOOGLE_TRUST";
   description?: string;
   isStaging?: boolean;
   isActive?: boolean;
+  eabKid?: string;
+  eabHmacKey?: string;
 }
 
 // ACME Account
@@ -586,8 +592,11 @@ export interface AcmeOrder {
 }
 
 export interface CreateAcmeOrderRequest {
+  providerId: number;
   accountId: number;
   domains: string[];
+  challengeType?: "HTTP_01" | "DNS_01" | "TLS_ALPN_01";
+  notes?: string;
 }
 
 // ACME Authorization
