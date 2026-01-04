@@ -12,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Plus, Search, Cloud, Server, Folder, Network, Play, Pause, RefreshCw, Calendar, CheckCircle, XCircle, Clock } from "lucide-react";
-import type { DiscoveryConfiguration, DiscoveryResult } from "@/lib/api/types";
+import { Plus, Search, Cloud, Server, Folder, Network, Play, Pause, RefreshCw, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { discoveryApi } from "@/lib/api";
+import type { DiscoveryConfiguration, DiscoveryResult, CreateDiscoveryRequest } from "@/lib/api/types";
 
 export default function Discovery() {
   const [configurations, setConfigurations] = useState<DiscoveryConfiguration[]>([]);
@@ -21,12 +22,12 @@ export default function Discovery() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("configurations");
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CreateDiscoveryRequest>({
     name: "",
-    discoveryType: "LDAP" as "LDAP" | "CLOUD" | "FILESYSTEM" | "NETWORK",
+    discoveryType: "LDAP",
     schedule: "0 0 * * *",
     enabled: true,
-    configuration: {} as Record<string, string>,
+    configuration: {},
   });
 
   useEffect(() => {
@@ -36,80 +37,22 @@ export default function Discovery() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      // Mock configurations
-      const mockConfigs: DiscoveryConfiguration[] = [
-        {
-          id: 1,
-          name: "AWS Certificate Discovery",
-          discoveryType: "CLOUD",
-          configuration: { provider: "AWS", regions: "us-east-1,us-west-2" },
-          schedule: "0 2 * * *",
-          enabled: true,
-          lastRun: "2025-12-28T02:00:00Z",
-          nextRun: "2025-12-29T02:00:00Z",
-          createdAt: "2025-01-15T10:00:00Z",
-        },
-        {
-          id: 2,
-          name: "Active Directory Scan",
-          discoveryType: "LDAP",
-          configuration: { server: "ldap.company.com", baseDN: "dc=company,dc=com" },
-          schedule: "0 3 * * *",
-          enabled: true,
-          lastRun: "2025-12-28T03:00:00Z",
-          nextRun: "2025-12-29T03:00:00Z",
-          createdAt: "2025-02-01T09:00:00Z",
-        },
-        {
-          id: 3,
-          name: "Server Filesystem Scan",
-          discoveryType: "FILESYSTEM",
-          configuration: { paths: "/etc/ssl,/opt/certificates", extensions: ".pem,.crt,.pfx" },
-          schedule: "0 4 * * *",
-          enabled: false,
-          lastRun: "2025-12-25T04:00:00Z",
-          createdAt: "2025-03-01T14:00:00Z",
-        },
-      ];
+      const configsData = await discoveryApi.getAll();
+      setConfigurations(configsData || []);
 
-      const mockResults: DiscoveryResult[] = [
-        {
-          id: 1,
-          configurationId: 1,
-          certificatesFound: 45,
-          newCertificates: 12,
-          existingCertificates: 33,
-          status: "COMPLETED",
-          startedAt: "2025-12-28T02:00:00Z",
-          completedAt: "2025-12-28T02:15:00Z",
-          details: [],
-        },
-        {
-          id: 2,
-          configurationId: 2,
-          certificatesFound: 78,
-          newCertificates: 5,
-          existingCertificates: 73,
-          status: "COMPLETED",
-          startedAt: "2025-12-28T03:00:00Z",
-          completedAt: "2025-12-28T03:08:00Z",
-          details: [],
-        },
-        {
-          id: 3,
-          configurationId: 1,
-          certificatesFound: 0,
-          newCertificates: 0,
-          existingCertificates: 0,
-          status: "RUNNING",
-          startedAt: "2025-12-29T02:00:00Z",
-          details: [],
-        },
-      ];
-
-      setConfigurations(mockConfigs);
-      setResults(mockResults);
+      // Fetch results for each configuration
+      const allResults: DiscoveryResult[] = [];
+      for (const config of configsData || []) {
+        try {
+          const configResults = await discoveryApi.getResults(config.id);
+          allResults.push(...(configResults || []));
+        } catch {
+          // Ignore individual result fetch failures
+        }
+      }
+      setResults(allResults);
     } catch (error) {
+      console.error("Failed to fetch discovery data:", error);
       toast.error("Failed to fetch discovery data");
     } finally {
       setLoading(false);
@@ -122,8 +65,16 @@ export default function Discovery() {
       return;
     }
     try {
+      await discoveryApi.create(formData);
       toast.success("Discovery configuration created");
       setIsDialogOpen(false);
+      setFormData({
+        name: "",
+        discoveryType: "LDAP",
+        schedule: "0 0 * * *",
+        enabled: true,
+        configuration: {},
+      });
       fetchData();
     } catch (error) {
       toast.error("Failed to create configuration");
@@ -131,7 +82,23 @@ export default function Discovery() {
   };
 
   const handleRunDiscovery = async (configId: number) => {
-    toast.success("Discovery scan started");
+    try {
+      await discoveryApi.run(configId);
+      toast.success("Discovery scan started");
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to start discovery scan");
+    }
+  };
+
+  const handleDeleteConfiguration = async (configId: number) => {
+    try {
+      await discoveryApi.delete(configId);
+      toast.success("Configuration deleted");
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to delete configuration");
+    }
   };
 
   const getDiscoveryTypeIcon = (type: string) => {
@@ -161,7 +128,7 @@ export default function Discovery() {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </AppLayout>
     );
@@ -177,75 +144,81 @@ export default function Discovery() {
               Automatically discover certificates across your infrastructure
             </p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Discovery Source
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Add Discovery Source</DialogTitle>
-                <DialogDescription>
-                  Configure a new certificate discovery source
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Name</Label>
-                  <Input
-                    placeholder="e.g., AWS Production"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Discovery Type</Label>
-                  <Select
-                    value={formData.discoveryType}
-                    onValueChange={(value: "LDAP" | "CLOUD" | "FILESYSTEM" | "NETWORK") =>
-                      setFormData({ ...formData, discoveryType: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CLOUD">Cloud Provider (AWS/Azure/GCP)</SelectItem>
-                      <SelectItem value="LDAP">LDAP/Active Directory</SelectItem>
-                      <SelectItem value="FILESYSTEM">Filesystem Scan</SelectItem>
-                      <SelectItem value="NETWORK">Network Scan</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Schedule (Cron)</Label>
-                  <Input
-                    placeholder="0 2 * * *"
-                    value={formData.schedule}
-                    onChange={(e) => setFormData({ ...formData, schedule: e.target.value })}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Example: "0 2 * * *" runs daily at 2 AM
-                  </p>
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label>Enabled</Label>
-                  <Switch
-                    checked={formData.enabled}
-                    onCheckedChange={(checked) => setFormData({ ...formData, enabled: checked })}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={fetchData}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Discovery Source
                 </Button>
-                <Button onClick={handleCreateConfiguration}>Create</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Add Discovery Source</DialogTitle>
+                  <DialogDescription>
+                    Configure a new certificate discovery source
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Name</Label>
+                    <Input
+                      placeholder="e.g., AWS Production"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Discovery Type</Label>
+                    <Select
+                      value={formData.discoveryType}
+                      onValueChange={(value: "LDAP" | "CLOUD" | "FILESYSTEM" | "NETWORK") =>
+                        setFormData({ ...formData, discoveryType: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CLOUD">Cloud Provider (AWS/Azure/GCP)</SelectItem>
+                        <SelectItem value="LDAP">LDAP/Active Directory</SelectItem>
+                        <SelectItem value="FILESYSTEM">Filesystem Scan</SelectItem>
+                        <SelectItem value="NETWORK">Network Scan</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Schedule (Cron)</Label>
+                    <Input
+                      placeholder="0 2 * * *"
+                      value={formData.schedule}
+                      onChange={(e) => setFormData({ ...formData, schedule: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Example: "0 2 * * *" runs daily at 2 AM
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label>Enabled</Label>
+                    <Switch
+                      checked={formData.enabled}
+                      onCheckedChange={(checked) => setFormData({ ...formData, enabled: checked })}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleCreateConfiguration}>Create</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {/* Summary Cards */}
@@ -275,7 +248,7 @@ export default function Discovery() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">New This Week</CardTitle>
+              <CardTitle className="text-sm font-medium">New Certificates</CardTitle>
               <Plus className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
@@ -310,59 +283,80 @@ export default function Discovery() {
                 <CardDescription>Manage your certificate discovery sources</CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Schedule</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Last Run</TableHead>
-                      <TableHead>Next Run</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {configurations.map((config) => (
-                      <TableRow key={config.id}>
-                        <TableCell className="font-medium">{config.name}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {getDiscoveryTypeIcon(config.discoveryType)}
-                            <span>{config.discoveryType}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">{config.schedule}</TableCell>
-                        <TableCell>
-                          <Badge variant={config.enabled ? "default" : "secondary"}>
-                            {config.enabled ? "Active" : "Disabled"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {config.lastRun ? new Date(config.lastRun).toLocaleString() : "Never"}
-                        </TableCell>
-                        <TableCell>
-                          {config.nextRun ? new Date(config.nextRun).toLocaleString() : "-"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleRunDiscovery(config.id)}
-                              title="Run Now"
-                            >
-                              <Play className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" title={config.enabled ? "Disable" : "Enable"}>
-                              {config.enabled ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                            </Button>
-                          </div>
-                        </TableCell>
+                {configurations.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No discovery sources configured</p>
+                    <p className="text-sm">Click "Add Discovery Source" to get started</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Schedule</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Last Run</TableHead>
+                        <TableHead>Next Run</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {configurations.map((config) => (
+                        <TableRow key={config.id}>
+                          <TableCell className="font-medium">{config.name}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {getDiscoveryTypeIcon(config.discoveryType)}
+                              <span>{config.discoveryType}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">{config.schedule}</TableCell>
+                          <TableCell>
+                            <Badge variant={config.enabled ? "default" : "secondary"}>
+                              {config.enabled ? "Active" : "Disabled"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {config.lastRun ? new Date(config.lastRun).toLocaleString() : "Never"}
+                          </TableCell>
+                          <TableCell>
+                            {config.nextRun ? new Date(config.nextRun).toLocaleString() : "-"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleRunDiscovery(config.id)}
+                                title="Run Now"
+                              >
+                                <Play className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title={config.enabled ? "Disable" : "Enable"}
+                              >
+                                {config.enabled ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteConfiguration(config.id)}
+                                className="text-destructive hover:text-destructive"
+                                title="Delete"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -374,51 +368,59 @@ export default function Discovery() {
                 <CardDescription>View the results of recent discovery scans</CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Configuration</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Certificates Found</TableHead>
-                      <TableHead>New</TableHead>
-                      <TableHead>Existing</TableHead>
-                      <TableHead>Started</TableHead>
-                      <TableHead>Duration</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {results.map((result) => {
-                      const config = configurations.find((c) => c.id === result.configurationId);
-                      const duration = result.completedAt
-                        ? Math.round(
-                            (new Date(result.completedAt).getTime() - new Date(result.startedAt).getTime()) / 1000
-                          )
-                        : null;
-                      return (
-                        <TableRow key={result.id}>
-                          <TableCell className="font-medium">{config?.name || "Unknown"}</TableCell>
-                          <TableCell>{getStatusBadge(result.status)}</TableCell>
-                          <TableCell>{result.certificatesFound}</TableCell>
-                          <TableCell className="text-green-600">+{result.newCertificates}</TableCell>
-                          <TableCell>{result.existingCertificates}</TableCell>
-                          <TableCell>{new Date(result.startedAt).toLocaleString()}</TableCell>
-                          <TableCell>
-                            {result.status === "RUNNING" ? (
-                              <div className="flex items-center gap-2">
-                                <Progress value={50} className="w-16" />
-                                <span className="text-sm">Running...</span>
-                              </div>
-                            ) : duration ? (
-                              `${duration}s`
-                            ) : (
-                              "-"
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                {results.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No scan results yet</p>
+                    <p className="text-sm">Run a discovery scan to see results</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Configuration</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Certificates Found</TableHead>
+                        <TableHead>New</TableHead>
+                        <TableHead>Existing</TableHead>
+                        <TableHead>Started</TableHead>
+                        <TableHead>Duration</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {results.map((result) => {
+                        const config = configurations.find((c) => c.id === result.configurationId);
+                        const duration = result.completedAt
+                          ? Math.round(
+                              (new Date(result.completedAt).getTime() - new Date(result.startedAt).getTime()) / 1000
+                            )
+                          : null;
+                        return (
+                          <TableRow key={result.id}>
+                            <TableCell className="font-medium">{config?.name || "Unknown"}</TableCell>
+                            <TableCell>{getStatusBadge(result.status)}</TableCell>
+                            <TableCell>{result.certificatesFound}</TableCell>
+                            <TableCell className="text-green-600">+{result.newCertificates}</TableCell>
+                            <TableCell>{result.existingCertificates}</TableCell>
+                            <TableCell>{new Date(result.startedAt).toLocaleString()}</TableCell>
+                            <TableCell>
+                              {result.status === "RUNNING" ? (
+                                <div className="flex items-center gap-2">
+                                  <Progress value={50} className="w-16" />
+                                  <span className="text-sm">Running...</span>
+                                </div>
+                              ) : duration ? (
+                                `${duration}s`
+                              ) : (
+                                "-"
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
