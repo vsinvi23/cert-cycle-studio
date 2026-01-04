@@ -99,8 +99,10 @@ export function IssueCertificateDialog({ onSuccess }: IssueCertificateDialogProp
     if (open) {
       setIsLoadingCAs(true);
       caApi.list()
-        .then((data) => {
-          setCas(Array.isArray(data) ? data : []);
+        .then((response: any) => {
+          // Handle paginated response with results array
+          const caList = response?.results || response || [];
+          setCas(Array.isArray(caList) ? caList : []);
         })
         .catch((error) => {
           console.error("Failed to fetch CAs:", error);
@@ -437,11 +439,15 @@ export function IssueCertificateDialog({ onSuccess }: IssueCertificateDialogProp
                             Loading CAs...
                           </div>
                         ) : cas.length > 0 ? (
-                          cas.map((ca) => (
-                            <SelectItem key={ca.id || ca.alias} value={ca.alias}>
-                              {ca.alias} ({ca.commonName})
-                            </SelectItem>
-                          ))
+                          cas.map((ca) => {
+                            const cnMatch = ca.distinguishedName?.split(',').find((p) => p.trim().startsWith('CN='));
+                            const displayName = cnMatch ? cnMatch.replace('CN=', '') : ca.commonName || ca.alias;
+                            return (
+                              <SelectItem key={ca.alias} value={ca.alias}>
+                                {ca.alias} ({displayName})
+                              </SelectItem>
+                            );
+                          })
                         ) : (
                           <div className="p-2 text-sm text-muted-foreground text-center">
                             No Certificate Authorities found
