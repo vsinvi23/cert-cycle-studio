@@ -1,18 +1,30 @@
 import { apiRequest } from "./config";
-import type { Role } from "./types";
+import type { 
+  Role, 
+  CreateRoleRequest,
+  SAMLConfiguration,
+  MFAEnableRequest,
+  KeyRotationConfig,
+  CreateApiKeyRequest,
+  CreateApiKeyResponse
+} from "./types";
 
 export const securityApi = {
+  // ==================== RBAC ROLES ====================
+
   /**
-   * Get all roles
+   * GET /api/security/rbac/roles
+   * List all RBAC roles
    */
   getAllRoles: async (): Promise<Role[]> => {
     return apiRequest<Role[]>("/api/security/rbac/roles");
   },
 
   /**
-   * Create a new role
+   * POST /api/security/rbac/roles
+   * Create RBAC role
    */
-  createRole: async (role: { name: string; description: string; permissions: string[] }): Promise<Role> => {
+  createRole: async (role: CreateRoleRequest): Promise<Role> => {
     return apiRequest<Role>("/api/security/rbac/roles", {
       method: "POST",
       body: JSON.stringify(role),
@@ -20,52 +32,65 @@ export const securityApi = {
   },
 
   /**
-   * Assign permissions to a role
+   * PUT /api/security/rbac/roles/{id}/permissions
+   * Assign permissions to role
    */
-  assignPermissions: async (roleId: number, permissions: Record<string, unknown>): Promise<Role> => {
+  assignPermissions: async (roleId: number, permissions: { permissions: string[] }): Promise<Role> => {
     return apiRequest<Role>(`/api/security/rbac/roles/${roleId}/permissions`, {
       method: "PUT",
       body: JSON.stringify(permissions),
     });
   },
 
-  /**
-   * Enable MFA for user
-   */
-  enableMFA: async (userId: number, method: "TOTP" | "SMS" | "EMAIL"): Promise<string> => {
-    return apiRequest<string>(
-      `/api/security/mfa/enable?userId=${userId}&method=${method}`,
-      { method: "POST" }
-    );
-  },
+  // ==================== SAML/SSO ====================
 
   /**
-   * Configure SAML/SSO
+   * POST /api/security/saml/configure
+   * Configure SAML/SSO integration
    */
-  configureSAML: async (config: Record<string, string>): Promise<string> => {
+  configureSAML: async (config: SAMLConfiguration): Promise<string> => {
     return apiRequest<string>("/api/security/saml/configure", {
       method: "POST",
       body: JSON.stringify(config),
     });
   },
 
+  // ==================== MFA ====================
+
   /**
-   * Generate API key
+   * POST /api/security/mfa/enable
+   * Enable Multi-Factor Authentication
    */
-  generateApiKey: async (config: { name: string; permissions: string[]; validityDays?: number }): Promise<string> => {
-    return apiRequest<string>("/api/security/api-keys/generate", {
+  enableMFA: async (request: MFAEnableRequest): Promise<string> => {
+    return apiRequest<string>("/api/security/mfa/enable", {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
+  },
+
+  // ==================== API KEYS ====================
+
+  /**
+   * POST /api/security/api-keys/generate
+   * Generate secure API key
+   */
+  generateApiKey: async (config: CreateApiKeyRequest): Promise<CreateApiKeyResponse> => {
+    return apiRequest<CreateApiKeyResponse>("/api/security/api-keys/generate", {
       method: "POST",
       body: JSON.stringify(config),
     });
   },
 
+  // ==================== KEY ROTATION ====================
+
   /**
+   * POST /api/security/keys/rotation/configure
    * Configure key rotation
    */
-  configureKeyRotation: async (rotationDays: number, autoRotate: boolean = false): Promise<string> => {
-    return apiRequest<string>(
-      `/api/security/keys/rotation/configure?rotationDays=${rotationDays}&autoRotate=${autoRotate}`,
-      { method: "POST" }
-    );
+  configureKeyRotation: async (config: KeyRotationConfig): Promise<string> => {
+    return apiRequest<string>("/api/security/keys/rotation/configure", {
+      method: "POST",
+      body: JSON.stringify(config),
+    });
   },
 };

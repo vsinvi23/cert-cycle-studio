@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Layers, Upload, Download, CheckCircle, XCircle, RefreshCw, Copy, FileCheck } from "lucide-react";
 import { toast } from "sonner";
 import { bulkApi, certificatesApi } from "@/lib/api";
-import type { Certificate, BulkOperationResult } from "@/lib/api/types";
+import type { Certificate, BulkOperationResult, RevokeReason } from "@/lib/api/types";
 
 export default function BulkOperations() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
@@ -23,7 +23,7 @@ export default function BulkOperations() {
 
   // Form state for bulk issue
   const [hostsInput, setHostsInput] = useState("");
-  const [revokeReason, setRevokeReason] = useState("");
+  const [revokeReason, setRevokeReason] = useState<RevokeReason | "">("");
 
   useEffect(() => {
     fetchCertificates();
@@ -288,8 +288,8 @@ export default function BulkOperations() {
                   <Label>Revocation Reason (optional)</Label>
                   <Input
                     value={revokeReason}
-                    onChange={(e) => setRevokeReason(e.target.value)}
-                    placeholder="e.g., Key compromise, CA compromise, etc."
+                    onChange={(e) => setRevokeReason(e.target.value as RevokeReason | "")}
+                    placeholder="KEY_COMPROMISE, CA_COMPROMISE, SUPERSEDED, etc."
                   />
                 </div>
               )}

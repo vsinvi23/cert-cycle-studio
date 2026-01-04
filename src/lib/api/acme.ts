@@ -1,8 +1,22 @@
 import { apiRequest } from "./config";
-import type { AcmeProvider, AcmeOrder } from "./types";
+import type { 
+  AcmeProvider, 
+  AcmeOrder, 
+  AcmeAccount,
+  AcmeAuthorization,
+  AcmeChallenge,
+  CreateAcmeProviderRequest,
+  CreateAcmeOrderRequest,
+  AcmeRenewalStatus,
+  EnableAcmeRenewalRequest,
+  DisableAcmeRenewalRequest
+} from "./types";
 
 export const acmeApi = {
+  // ==================== PROVIDER MANAGEMENT ====================
+  
   /**
+   * GET /api/acme/providers
    * List all ACME providers
    */
   getProviders: async (): Promise<AcmeProvider[]> => {
@@ -10,18 +24,18 @@ export const acmeApi = {
   },
 
   /**
+   * GET /api/acme/providers/{id}
+   * Get ACME provider by ID
+   */
+  getProvider: async (id: number): Promise<AcmeProvider> => {
+    return apiRequest<AcmeProvider>(`/api/acme/providers/${id}`);
+  },
+
+  /**
+   * POST /api/acme/providers
    * Create ACME provider
    */
-  createProvider: async (provider: {
-    name: string;
-    type: "LETS_ENCRYPT_PRODUCTION" | "LETS_ENCRYPT_STAGING" | "ZEROSSL" | "BUYPASS" | "CUSTOM";
-    directoryUrl?: string;
-    isStaging?: boolean;
-    isActive?: boolean;
-    eabKid?: string;
-    eabHmacKey?: string;
-    description?: string;
-  }): Promise<AcmeProvider> => {
+  createProvider: async (provider: CreateAcmeProviderRequest): Promise<AcmeProvider> => {
     return apiRequest<AcmeProvider>("/api/acme/providers", {
       method: "POST",
       body: JSON.stringify(provider),
@@ -29,6 +43,37 @@ export const acmeApi = {
   },
 
   /**
+   * DELETE /api/acme/providers/{id}
+   * Delete ACME provider
+   */
+  deleteProvider: async (id: number): Promise<void> => {
+    return apiRequest<void>(`/api/acme/providers/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  // ==================== ACCOUNT MANAGEMENT ====================
+
+  /**
+   * GET /api/acme/accounts
+   * List all ACME accounts
+   */
+  getAccounts: async (): Promise<AcmeAccount[]> => {
+    return apiRequest<AcmeAccount[]>("/api/acme/accounts");
+  },
+
+  /**
+   * GET /api/acme/accounts/{id}
+   * Get ACME account by ID
+   */
+  getAccount: async (id: number): Promise<AcmeAccount> => {
+    return apiRequest<AcmeAccount>(`/api/acme/accounts/${id}`);
+  },
+
+  // ==================== ORDER MANAGEMENT ====================
+
+  /**
+   * GET /api/acme/orders
    * List all ACME orders
    */
   getOrders: async (): Promise<AcmeOrder[]> => {
@@ -36,15 +81,18 @@ export const acmeApi = {
   },
 
   /**
+   * GET /api/acme/orders/{id}
+   * Get ACME order by ID
+   */
+  getOrder: async (id: number): Promise<AcmeOrder> => {
+    return apiRequest<AcmeOrder>(`/api/acme/orders/${id}`);
+  },
+
+  /**
+   * POST /api/acme/orders
    * Create ACME order
    */
-  createOrder: async (order: {
-    providerId: number;
-    accountId: number;
-    domains: string[];
-    challengeType?: "HTTP_01" | "DNS_01" | "TLS_ALPN_01";
-    notes?: string;
-  }): Promise<AcmeOrder> => {
+  createOrder: async (order: CreateAcmeOrderRequest): Promise<AcmeOrder> => {
     return apiRequest<AcmeOrder>("/api/acme/orders", {
       method: "POST",
       body: JSON.stringify(order),
@@ -52,6 +100,79 @@ export const acmeApi = {
   },
 
   /**
+   * DELETE /api/acme/orders/{id}
+   * Cancel ACME order
+   */
+  cancelOrder: async (id: number): Promise<void> => {
+    return apiRequest<void>(`/api/acme/orders/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  /**
+   * GET /api/acme/accounts/{accountId}/orders
+   * Get orders by account
+   */
+  getOrdersByAccount: async (accountId: number): Promise<AcmeOrder[]> => {
+    return apiRequest<AcmeOrder[]>(`/api/acme/accounts/${accountId}/orders`);
+  },
+
+  // ==================== AUTHORIZATION & CHALLENGE ====================
+
+  /**
+   * GET /api/acme/orders/{orderId}/authorizations
+   * Get authorizations for order
+   */
+  getOrderAuthorizations: async (orderId: number): Promise<AcmeAuthorization[]> => {
+    return apiRequest<AcmeAuthorization[]>(`/api/acme/orders/${orderId}/authorizations`);
+  },
+
+  /**
+   * GET /api/acme/authorizations/{id}
+   * Get authorization details
+   */
+  getAuthorization: async (id: number): Promise<AcmeAuthorization> => {
+    return apiRequest<AcmeAuthorization>(`/api/acme/authorizations/${id}`);
+  },
+
+  /**
+   * GET /api/acme/authorizations/{authId}/challenges
+   * Get challenges for authorization
+   */
+  getAuthorizationChallenges: async (authId: number): Promise<AcmeChallenge[]> => {
+    return apiRequest<AcmeChallenge[]>(`/api/acme/authorizations/${authId}/challenges`);
+  },
+
+  /**
+   * GET /api/acme/challenges/{id}
+   * Get challenge details
+   */
+  getChallenge: async (id: number): Promise<AcmeChallenge> => {
+    return apiRequest<AcmeChallenge>(`/api/acme/challenges/${id}`);
+  },
+
+  /**
+   * POST /api/acme/challenges/{id}/trigger
+   * Trigger challenge validation
+   */
+  triggerChallenge: async (id: number): Promise<unknown> => {
+    return apiRequest(`/api/acme/challenges/${id}/trigger`, {
+      method: "POST",
+    });
+  },
+
+  // ==================== AUTO-RENEWAL ====================
+
+  /**
+   * GET /api/acme/renewal/status
+   * Get auto-renewal status
+   */
+  getRenewalStatus: async (): Promise<AcmeRenewalStatus> => {
+    return apiRequest<AcmeRenewalStatus>("/api/acme/renewal/status");
+  },
+
+  /**
+   * POST /api/acme/orders/{id}/renew
    * Manual renewal for specific order
    */
   manualRenewal: async (orderId: number): Promise<Record<string, string>> => {
@@ -61,70 +182,64 @@ export const acmeApi = {
   },
 
   /**
-   * Trigger challenge validation
-   */
-  triggerChallenge: async (challengeId: number): Promise<unknown> => {
-    return apiRequest(`/api/acme/challenges/${challengeId}/trigger`, {
-      method: "POST",
-    });
-  },
-
-  /**
+   * POST /api/acme/renewal/enable
    * Enable auto-renewal
    */
-  enableAutoRenewal: async (): Promise<Record<string, string>> => {
+  enableAutoRenewal: async (request: EnableAcmeRenewalRequest): Promise<Record<string, string>> => {
     return apiRequest<Record<string, string>>("/api/acme/renewal/enable", {
       method: "POST",
+      body: JSON.stringify(request),
     });
   },
 
   /**
+   * POST /api/acme/renewal/disable
    * Disable auto-renewal
    */
-  disableAutoRenewal: async (): Promise<Record<string, string>> => {
+  disableAutoRenewal: async (request: DisableAcmeRenewalRequest): Promise<Record<string, string>> => {
     return apiRequest<Record<string, string>>("/api/acme/renewal/disable", {
       method: "POST",
+      body: JSON.stringify(request),
     });
   },
 };
 
 export const integrationsApi = {
   /**
-   * Configure ACME protocol (Let's Encrypt, etc.)
+   * POST /api/integrations/acme/configure
+   * Configure ACME integration
    */
-  configureAcme: async (email: string, acmeServerUrl?: string): Promise<string> => {
-    let url = `/api/integrations/acme/configure?email=${encodeURIComponent(email)}`;
-    if (acmeServerUrl) {
-      url += `&acmeServerUrl=${encodeURIComponent(acmeServerUrl)}`;
-    }
-    return apiRequest<string>(url, { method: "POST" });
+  configureAcme: async (config: { provider?: string; email: string; autoRenew?: boolean }): Promise<string> => {
+    return apiRequest<string>("/api/integrations/acme/configure", {
+      method: "POST",
+      body: JSON.stringify(config),
+    });
   },
 
   /**
+   * POST /api/integrations/acme/order
    * Order certificate via ACME
    */
-  orderAcmeCertificate: async (domains: string[], validationType: string = "HTTP-01"): Promise<string> => {
-    const params = domains.map(d => `domains=${encodeURIComponent(d)}`).join("&");
-    return apiRequest<string>(
-      `/api/integrations/acme/order?${params}&validationType=${encodeURIComponent(validationType)}`,
-      { method: "POST" }
-    );
+  orderAcmeCertificate: async (domains: string[]): Promise<string> => {
+    return apiRequest<string>("/api/integrations/acme/order", {
+      method: "POST",
+      body: JSON.stringify({ domains }),
+    });
   },
 
   /**
+   * POST /api/integrations/acme/validate
    * Validate domain ownership
    */
-  validateDomain: async (orderId: string, validationType: string, proofData: Record<string, string>): Promise<string> => {
-    return apiRequest<string>(
-      `/api/integrations/acme/validate?orderId=${encodeURIComponent(orderId)}&validationType=${encodeURIComponent(validationType)}`,
-      {
-        method: "POST",
-        body: JSON.stringify(proofData),
-      }
-    );
+  validateDomain: async (domain: string, challengeType: "HTTP-01" | "DNS-01" | "TLS-ALPN-01"): Promise<string> => {
+    return apiRequest<string>("/api/integrations/acme/validate", {
+      method: "POST",
+      body: JSON.stringify({ domain, challengeType }),
+    });
   },
 
   /**
+   * POST /api/integrations/jenkins/configure
    * Configure Jenkins CI/CD integration
    */
   configureJenkins: async (config: { jenkinsUrl: string; apiToken: string; jobName: string }): Promise<string> => {
@@ -135,9 +250,10 @@ export const integrationsApi = {
   },
 
   /**
+   * POST /api/integrations/kubernetes/configure
    * Configure Kubernetes integration
    */
-  configureKubernetes: async (config: { clusterUrl: string; serviceAccountToken: string; namespace: string }): Promise<string> => {
+  configureKubernetes: async (config: { kubeconfig: string; namespace?: string }): Promise<string> => {
     return apiRequest<string>("/api/integrations/kubernetes/configure", {
       method: "POST",
       body: JSON.stringify(config),
