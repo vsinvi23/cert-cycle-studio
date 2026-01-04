@@ -9,9 +9,8 @@ import {
   ShieldPlus, 
   Users, 
   Radar,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
+  ChevronUp,
   Key,
   Bell,
   Clock,
@@ -20,8 +19,10 @@ import {
   Settings,
   Zap,
   Layers,
-  FolderCog,
   Award,
+  FolderCog,
+  PanelLeftClose,
+  PanelLeft,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,12 +38,13 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -77,188 +79,272 @@ export function AppSidebar() {
   
   const isCertificateActive = certificateItems.some(item => location.pathname.startsWith(item.url));
   const isConfigurationActive = configurationItems.some(item => location.pathname.startsWith(item.url));
-  const [activeSection, setActiveSection] = useState<"certificates" | "configuration" | null>(
-    isCertificateActive ? "certificates" : isConfigurationActive ? "configuration" : null
-  );
+  
+  const [certificatesOpen, setCertificatesOpen] = useState(isCertificateActive);
+  const [configurationOpen, setConfigurationOpen] = useState(isConfigurationActive);
 
-  const handleSectionClick = (section: "certificates" | "configuration") => {
-    setActiveSection(activeSection === section ? null : section);
-  };
+  // Keep sections open when navigating to their items
+  useEffect(() => {
+    if (isCertificateActive) setCertificatesOpen(true);
+    if (isConfigurationActive) setConfigurationOpen(true);
+  }, [isCertificateActive, isConfigurationActive]);
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
 
+  const renderNavItem = (item: { title: string; url: string; icon: React.ElementType }, isSubItem = false) => {
+    const Icon = item.icon;
+    
+    if (isCollapsed) {
+      return (
+        <Tooltip key={item.title}>
+          <TooltipTrigger asChild>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <NavLink
+                  to={item.url}
+                  className="flex items-center justify-center rounded-lg p-2.5 text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                  activeClassName="bg-sidebar-primary/10 text-sidebar-primary"
+                >
+                  <Icon className="h-5 w-5" />
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="font-medium">
+            {item.title}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return (
+      <SidebarMenuItem key={item.title}>
+        <SidebarMenuButton asChild>
+          <NavLink
+            to={item.url}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
+              isSubItem && "py-2 text-sm"
+            )}
+            activeClassName="bg-sidebar-primary/10 text-sidebar-primary font-medium"
+          >
+            <Icon className={cn("shrink-0", isSubItem ? "h-4 w-4" : "h-5 w-5")} />
+            <span className="truncate">{item.title}</span>
+          </NavLink>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  };
+
+  const renderCollapsibleSection = (
+    title: string,
+    icon: React.ElementType,
+    items: { title: string; url: string; icon: React.ElementType }[],
+    isOpen: boolean,
+    setIsOpen: (open: boolean) => void,
+    isActive: boolean
+  ) => {
+    const Icon = icon;
+
+    if (isCollapsed) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => toggleSidebar()}
+              className={cn(
+                "flex w-full items-center justify-center rounded-lg p-2.5 text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                isActive && "bg-sidebar-primary/10 text-sidebar-primary"
+              )}
+            >
+              <Icon className="h-5 w-5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="font-medium">
+            {title}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return (
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CollapsibleTrigger asChild>
+          <button
+            className={cn(
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
+              isActive && "bg-sidebar-primary/10 text-sidebar-primary"
+            )}
+          >
+            <Icon className="h-5 w-5 shrink-0" />
+            <span className="flex-1 truncate text-left font-medium">{title}</span>
+            {isOpen ? (
+              <ChevronUp className="h-4 w-4 shrink-0 text-sidebar-foreground/50" />
+            ) : (
+              <ChevronDown className="h-4 w-4 shrink-0 text-sidebar-foreground/50" />
+            )}
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+          <SidebarMenu className="mt-1 space-y-0.5 border-l-2 border-sidebar-border ml-5 pl-3">
+            {items.map((item) => renderNavItem(item, true))}
+          </SidebarMenu>
+        </CollapsibleContent>
+      </Collapsible>
+    );
+  };
 
   return (
     <Sidebar 
       collapsible="icon" 
       className={cn(
-        "border-r-0 transition-all duration-300",
-        isCollapsed ? "w-16 min-w-16" : "w-60 min-w-60"
+        "border-r border-sidebar-border bg-sidebar transition-all duration-300",
+        isCollapsed ? "w-16" : "w-64"
       )}
     >
-      <SidebarHeader className="flex items-center justify-between px-3 py-4 border-b border-sidebar-border">
+      <SidebarHeader className="border-b border-sidebar-border p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sidebar-primary shrink-0">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sidebar-primary to-sidebar-primary/80 shadow-lg">
             <Shield className="h-5 w-5 text-sidebar-primary-foreground" />
           </div>
           {!isCollapsed && (
-            <div className="flex flex-col">
-              <span className="font-semibold text-sidebar-foreground">CertAxis</span>
-              <span className="text-xs text-sidebar-foreground/60">PKI Lifecycle</span>
+            <div className="flex flex-col overflow-hidden">
+              <span className="truncate font-bold text-sidebar-foreground">CertAxis</span>
+              <span className="truncate text-xs text-sidebar-foreground/60">PKI Lifecycle Manager</span>
             </div>
           )}
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="flex flex-col px-2 py-4 overflow-y-auto">
-        <SidebarMenu className="gap-1">
-          {navItems.map((item) => (
-            <SidebarMenuItem key={item.title}>
+      <SidebarContent className="flex flex-col gap-2 overflow-y-auto p-3">
+        {/* Main Navigation */}
+        <SidebarMenu className="space-y-1">
+          {navItems.map((item) => renderNavItem(item))}
+        </SidebarMenu>
+
+        {/* Certificates Section */}
+        <div className="mt-2">
+          {renderCollapsibleSection(
+            "Certificates",
+            Award,
+            certificateItems,
+            certificatesOpen,
+            setCertificatesOpen,
+            isCertificateActive
+          )}
+        </div>
+
+        {/* Configuration Section */}
+        <div className="mt-1">
+          {renderCollapsibleSection(
+            "Configuration",
+            FolderCog,
+            configurationItems,
+            configurationOpen,
+            setConfigurationOpen,
+            isConfigurationActive
+          )}
+        </div>
+      </SidebarContent>
+
+      <SidebarFooter className="border-t border-sidebar-border p-3">
+        <SidebarMenu className="space-y-1">
+          {/* Settings */}
+          {isCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to="/settings"
+                      className="flex items-center justify-center rounded-lg p-2.5 text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                      activeClassName="bg-sidebar-primary/10 text-sidebar-primary"
+                    >
+                      <Settings className="h-5 w-5" />
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="font-medium">
+                Settings
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <SidebarMenuItem>
               <SidebarMenuButton asChild>
                 <NavLink
-                  to={item.url}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                    isCollapsed && "justify-center px-0"
-                  )}
-                  activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                  to="/settings"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                  activeClassName="bg-sidebar-primary/10 text-sidebar-primary font-medium"
                 >
-                  <item.icon className="h-4 w-4 shrink-0" />
-                  {!isCollapsed && <span className="truncate text-sm">{item.title}</span>}
+                  <Settings className="h-5 w-5 shrink-0" />
+                  <span>Settings</span>
                 </NavLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+          )}
 
-        {/* Expanded Certificate Items - shown below My Requests when Certificates is active */}
-        {(activeSection === "certificates" || isCertificateActive) && (
-          <SidebarMenu className="gap-1 mt-2 ml-2 border-l border-sidebar-border pl-2">
-            {certificateItems.map((item) => (
-              <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton asChild>
-                  <NavLink
-                    to={item.url}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                      isCollapsed && "justify-center px-0"
-                    )}
-                    activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                  >
-                    <item.icon className="h-4 w-4 shrink-0" />
-                    {!isCollapsed && <span className="truncate text-sm">{item.title}</span>}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        )}
-
-        {/* Expanded Configuration Items - shown below My Requests when Configuration is active */}
-        {(activeSection === "configuration" || isConfigurationActive) && (
-          <SidebarMenu className="gap-1 mt-2 ml-2 border-l border-sidebar-border pl-2">
-            {configurationItems.map((item) => (
-              <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton asChild>
-                  <NavLink
-                    to={item.url}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                      isCollapsed && "justify-center px-0"
-                    )}
-                    activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                  >
-                    <item.icon className="h-4 w-4 shrink-0" />
-                    {!isCollapsed && <span className="truncate text-sm">{item.title}</span>}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        )}
-
-        {/* Spacer to push section buttons to bottom */}
-        <div className="flex-1" />
-
-        {/* Certificate Section Button */}
-        <button
-          onClick={() => handleSectionClick("certificates")}
-          className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground w-full mt-2",
-            isCollapsed && "justify-center px-0",
-            (activeSection === "certificates" || isCertificateActive) && "bg-sidebar-accent text-sidebar-primary font-medium"
-          )}
-        >
-          <Award className="h-4 w-4 shrink-0" />
-          {!isCollapsed && (
-            <>
-              <span className="truncate text-sm flex-1 text-left">Certificates</span>
-              <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", (activeSection === "certificates" || isCertificateActive) && "rotate-180")} />
-            </>
-          )}
-        </button>
-
-        {/* Configuration Section Button */}
-        <button
-          onClick={() => handleSectionClick("configuration")}
-          className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground w-full mt-1",
-            isCollapsed && "justify-center px-0",
-            (activeSection === "configuration" || isConfigurationActive) && "bg-sidebar-accent text-sidebar-primary font-medium"
-          )}
-        >
-          <FolderCog className="h-4 w-4 shrink-0" />
-          {!isCollapsed && (
-            <>
-              <span className="truncate text-sm flex-1 text-left">Configuration</span>
-              <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", (activeSection === "configuration" || isConfigurationActive) && "rotate-180")} />
-            </>
-          )}
-        </button>
-      </SidebarContent>
-
-      <SidebarFooter className="flex flex-col gap-1 px-2 py-3 border-t border-sidebar-border">
-        <NavLink
-          to="/settings"
-          className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground",
-            isCollapsed && "justify-center px-0"
-          )}
-          activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-        >
-          <Settings className="h-4 w-4 shrink-0" />
-          {!isCollapsed && <span className="text-sm">Settings</span>}
-        </NavLink>
-        <button
-          onClick={handleLogout}
-          className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground w-full",
-            isCollapsed && "justify-center px-0"
-          )}
-        >
-          <LogOut className="h-4 w-4 shrink-0" />
-          {!isCollapsed && <span className="text-sm">Logout</span>}
-        </button>
-        
-        <button
-          onClick={toggleSidebar}
-          className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground w-full mt-1",
-            isCollapsed && "justify-center px-0"
-          )}
-        >
+          {/* Logout */}
           {isCollapsed ? (
-            <ChevronRight className="h-4 w-4 shrink-0" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <SidebarMenuItem>
+                  <button
+                    onClick={handleLogout}
+                    className="flex w-full items-center justify-center rounded-lg p-2.5 text-sidebar-foreground/70 transition-colors hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <LogOut className="h-5 w-5" />
+                  </button>
+                </SidebarMenuItem>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="font-medium">
+                Logout
+              </TooltipContent>
+            </Tooltip>
           ) : (
-            <>
-              <ChevronLeft className="h-4 w-4 shrink-0" />
-              <span className="text-sm">Collapse</span>
-            </>
+            <SidebarMenuItem>
+              <button
+                onClick={handleLogout}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-colors hover:bg-destructive/10 hover:text-destructive"
+              >
+                <LogOut className="h-5 w-5 shrink-0" />
+                <span>Logout</span>
+              </button>
+            </SidebarMenuItem>
           )}
-        </button>
+
+          {/* Collapse Toggle */}
+          {isCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <SidebarMenuItem>
+                  <button
+                    onClick={toggleSidebar}
+                    className="flex w-full items-center justify-center rounded-lg p-2.5 text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                  >
+                    <PanelLeft className="h-5 w-5" />
+                  </button>
+                </SidebarMenuItem>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="font-medium">
+                Expand Sidebar
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <SidebarMenuItem>
+              <button
+                onClick={toggleSidebar}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              >
+                <PanelLeftClose className="h-5 w-5 shrink-0" />
+                <span>Collapse</span>
+              </button>
+            </SidebarMenuItem>
+          )}
+        </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
   );
