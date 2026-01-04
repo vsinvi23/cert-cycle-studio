@@ -93,10 +93,25 @@ export function IssueCertificateDialog({ onSuccess }: IssueCertificateDialogProp
   const [open, setOpen] = useState(false);
   const [cas, setCas] = useState<CertificateAuthority[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingCAs, setIsLoadingCAs] = useState(false);
 
   useEffect(() => {
     if (open) {
-      caApi.list().then(setCas).catch(console.error);
+      setIsLoadingCAs(true);
+      caApi.list()
+        .then((data) => {
+          setCas(Array.isArray(data) ? data : []);
+        })
+        .catch((error) => {
+          console.error("Failed to fetch CAs:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load Certificate Authorities",
+            variant: "destructive",
+          });
+          setCas([]);
+        })
+        .finally(() => setIsLoadingCAs(false));
     }
   }, [open]);
 
@@ -416,17 +431,21 @@ export function IssueCertificateDialog({ onSuccess }: IssueCertificateDialogProp
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {cas.length > 0 ? (
+                        {isLoadingCAs ? (
+                          <div className="flex items-center justify-center p-2">
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Loading CAs...
+                          </div>
+                        ) : cas.length > 0 ? (
                           cas.map((ca) => (
-                            <SelectItem key={ca.id} value={ca.alias}>
+                            <SelectItem key={ca.id || ca.alias} value={ca.alias}>
                               {ca.alias} ({ca.commonName})
                             </SelectItem>
                           ))
                         ) : (
-                          <>
-                            <SelectItem value="root-ca">Root CA</SelectItem>
-                            <SelectItem value="intermediate-ca">Intermediate CA</SelectItem>
-                          </>
+                          <div className="p-2 text-sm text-muted-foreground text-center">
+                            No Certificate Authorities found
+                          </div>
                         )}
                       </SelectContent>
                     </Select>
