@@ -34,8 +34,8 @@ export default function ViewCA() {
       const response = await caApi.list();
       if (Array.isArray(response)) {
         setCas(response);
-      } else if (response && 'content' in response) {
-        setCas(response.content);
+      } else if (response && typeof response === 'object' && 'content' in (response as Record<string, unknown>)) {
+        setCas((response as { content: typeof cas }).content);
       }
     } catch (error) {
       console.error("Failed to fetch CAs:", error);

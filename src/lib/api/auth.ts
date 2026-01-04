@@ -1,8 +1,9 @@
-import { apiRequest, setAuthToken, clearAuthToken, API_BASE_URL } from "./config";
+import { setAuthToken, clearAuthToken, API_BASE_URL } from "./config";
 import type { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse } from "./types";
 
 export const authApi = {
   /**
+   * POST /api/auth/login
    * Authenticate user and receive JWT token
    */
   login: async (credentials: LoginRequest): Promise<LoginResponse> => {
@@ -19,10 +20,12 @@ export const authApi = {
 
     const data = await response.json();
     setAuthToken(data.token);
+    localStorage.setItem("certaxis_token", data.token);
     return data;
   },
 
   /**
+   * POST /api/register
    * Register a new user
    */
   register: async (data: RegisterRequest): Promise<RegisterResponse> => {
@@ -34,7 +37,7 @@ export const authApi = {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || "Registration failed");
+      throw new Error(error.message || "Registration failed. Username may already exist.");
     }
 
     return response.json();
@@ -45,5 +48,7 @@ export const authApi = {
    */
   logout: () => {
     clearAuthToken();
+    localStorage.removeItem("certaxis_token");
+    localStorage.removeItem("user");
   },
 };

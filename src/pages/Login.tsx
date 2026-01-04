@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Shield, Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { Shield, Eye, EyeOff, Lock, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -21,7 +21,7 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await login(email, password);
+      await login(username, password);
       toast({
         title: "Welcome back!",
         description: "You have successfully logged in.",
@@ -30,7 +30,7 @@ export default function Login() {
     } catch (error) {
       toast({
         title: "Login failed",
-        description: "Please check your credentials and try again.",
+        description: error instanceof Error ? error.message : "Please check your credentials and try again.",
         variant: "destructive",
       });
     } finally {
@@ -48,29 +48,29 @@ export default function Login() {
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
               <Shield className="h-7 w-7 text-white" />
             </div>
-            <span className="text-2xl font-bold text-white tracking-tight">CertManager</span>
+            <span className="text-2xl font-bold text-white tracking-tight">CertAxis</span>
           </div>
           <h1 className="text-4xl xl:text-5xl font-bold text-white leading-tight mb-6">
-            Secure Your Digital
+            Enterprise Certificate
             <br />
-            <span className="text-white/90">Certificate Lifecycle</span>
+            <span className="text-white/90">Lifecycle Management</span>
           </h1>
           <p className="text-lg text-white/80 max-w-md leading-relaxed">
-            Streamline certificate management with automated tracking, 
-            renewal workflows, and comprehensive compliance reporting.
+            Comprehensive SSL/TLS certificate management with 110+ APIs, 
+            ACME v2 protocol support, and advanced automation capabilities.
           </p>
           <div className="mt-12 flex gap-8">
             <div className="text-center">
-              <div className="text-3xl font-bold text-white">99.9%</div>
-              <div className="text-sm text-white/70 mt-1">Uptime</div>
+              <div className="text-3xl font-bold text-white">110+</div>
+              <div className="text-sm text-white/70 mt-1">REST APIs</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-white">500+</div>
-              <div className="text-sm text-white/70 mt-1">Companies</div>
+              <div className="text-3xl font-bold text-white">ACME v2</div>
+              <div className="text-sm text-white/70 mt-1">Protocol</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-white">24/7</div>
-              <div className="text-sm text-white/70 mt-1">Support</div>
+              <div className="text-sm text-white/70 mt-1">Monitoring</div>
             </div>
           </div>
         </div>
@@ -87,7 +87,7 @@ export default function Login() {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
               <Shield className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold text-foreground">CertManager</span>
+            <span className="text-xl font-bold text-foreground">CertAxis</span>
           </div>
 
           <div className="mb-8">
@@ -99,17 +99,17 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">
-                Email Address
+              <Label htmlFor="username" className="text-sm font-medium">
+                Username
               </Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="username"
+                  type="text"
+                  placeholder="Enter your username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="pl-10 h-11 bg-secondary/50 border-border/50 focus:bg-background transition-colors"
                   required
                 />

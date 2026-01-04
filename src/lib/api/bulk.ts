@@ -7,42 +7,64 @@ import {
 } from './types';
 
 export const bulkApi = {
-  // Bulk issue certificates (sync)
+  // ==================== SYNC BULK OPERATIONS ====================
+
+  /**
+   * POST /api/certificates/bulk-issue
+   * Bulk issue certificates (sync)
+   */
   issueCertificates: (request: BulkIssueRequest) =>
     apiRequest<BulkOperationResult>('/api/certificates/bulk-issue', {
       method: 'POST',
       body: JSON.stringify(request),
     }),
 
-  // Bulk renew certificates (sync)
+  /**
+   * POST /api/certificates/bulk-renew
+   * Bulk renew certificates (sync)
+   */
   renewCertificates: (request: BulkRenewRequest) =>
     apiRequest<BulkOperationResult>('/api/certificates/bulk-renew', {
       method: 'POST',
       body: JSON.stringify(request),
     }),
 
-  // Bulk revoke certificates (sync)
+  /**
+   * POST /api/certificates/bulk-revoke
+   * Bulk revoke certificates (sync)
+   */
   revokeCertificates: (request: BulkRevokeRequest) =>
     apiRequest<BulkOperationResult>('/api/certificates/bulk-revoke', {
       method: 'POST',
       body: JSON.stringify(request),
     }),
 
-  // Bulk issue certificates (async - returns job ID)
+  // ==================== ASYNC BULK OPERATIONS ====================
+
+  /**
+   * POST /api/bulk/issue
+   * Bulk issue certificates (async - returns job ID)
+   */
   issueAsync: (request: BulkIssueRequest) =>
     apiRequest<{ jobId: string }>('/api/bulk/issue', {
       method: 'POST',
       body: JSON.stringify(request),
     }),
 
-  // Bulk renew certificates (async - returns job ID)
+  /**
+   * POST /api/bulk/renew
+   * Bulk renew certificates (async - returns job ID)
+   */
   renewAsync: (request: BulkRenewRequest) =>
     apiRequest<{ jobId: string }>('/api/bulk/renew', {
       method: 'POST',
       body: JSON.stringify(request),
     }),
 
-  // Bulk revoke certificates (async - returns job ID)
+  /**
+   * POST /api/bulk/revoke
+   * Bulk revoke certificates (async - returns job ID)
+   */
   revokeAsync: (request: BulkRevokeRequest) =>
     apiRequest<{ jobId: string }>('/api/bulk/revoke', {
       method: 'POST',

@@ -40,6 +40,7 @@ export interface DashboardMetrics {
   expiringIn30Days: number;
   expiringIn7Days: number;
   avgCertificateAgeDays: number;
+  healthScore?: number;
 }
 
 // Expiring Certificate
@@ -95,6 +96,7 @@ export interface ComplianceScore {
 // Certificate
 export interface Certificate {
   id: number;
+  alias?: string;
   certificateName?: string;
   certData?: string;
   subject?: string;
@@ -102,6 +104,7 @@ export interface Certificate {
   host?: string;
   issuerCA?: string;
   issuer?: string;
+  organization?: string;
   algorithm?: string;
   keySize?: number;
   validFrom: string;
@@ -109,14 +112,47 @@ export interface Certificate {
   serialNumber?: string;
   status: "ACTIVE" | "EXPIRED" | "REVOKED";
   createdAt: string;
+  updatedAt?: string;
   createdBy?: User;
   expired?: boolean;
 }
 
+// Certificate Add Request
+export interface AddCertificateRequest {
+  userId: number;
+  alias: string;
+  commonName: string;
+  organization?: string;
+  validityDays?: number;
+}
+
+// Issue Certificate Request
+export interface IssueCertificateRequest {
+  commonName: string;
+  organization?: string;
+  organizationalUnit?: string;
+  locality?: string;
+  state?: string;
+  country?: string;
+  caAlias: string;
+  algorithm?: "RSA" | "ECDSA";
+  keySize?: number;
+  validityDays?: number;
+  subjectAlternativeNames?: string[];
+}
+
+// Revoke Reason
+export type RevokeReason = 
+  | "KEY_COMPROMISE" 
+  | "CA_COMPROMISE" 
+  | "AFFILIATION_CHANGED" 
+  | "SUPERSEDED" 
+  | "CESSATION_OF_OPERATION";
+
 // Nmap Certificate Scan
 export interface NmapScanRequest {
-  targets: string;
-  ports?: string;
+  targets: string[] | string;
+  ports?: number[] | string;
 }
 
 export interface NmapCertificateScan {
@@ -137,15 +173,17 @@ export interface NmapCertificateScan {
 
 // Certificate Authority
 export interface CreateCARequest {
-  commonName: string;
-  organization?: string;
-  organizationalUnit?: string;
-  locality?: string;
-  state?: string;
-  country?: string;
-  signatureAlgorithm: string;
-  validityInDays?: number;
   alias: string;
+  cn: string;
+  algorithm?: "RSA" | "ECDSA";
+  keySize?: number;
+  validityDays?: number;
+}
+
+export interface ImportCARequest {
+  alias: string;
+  certificate: string;
+  privateKey?: string;
 }
 
 export interface CertificateAuthority {
@@ -188,6 +226,12 @@ export interface Role {
   createdAt: string;
 }
 
+export interface CreateRoleRequest {
+  name: string;
+  description?: string;
+  permissions: string[];
+}
+
 // Alert Configuration
 export interface AlertConfiguration {
   id: number;
@@ -203,7 +247,6 @@ export interface AlertConfiguration {
 }
 
 export interface AlertConfigurationRequest {
-  id?: number;
   name: string;
   alertType: "EXPIRATION" | "REVOCATION" | "ISSUANCE" | "COMPLIANCE";
   enabled?: boolean;
@@ -250,6 +293,13 @@ export interface AlertHistory {
   sentAt?: string;
 }
 
+// Webhook Registration
+export interface WebhookRegistration {
+  url: string;
+  events: string[];
+  secret?: string;
+}
+
 // Audit Log
 export interface AuditLog {
   id: number;
@@ -279,6 +329,52 @@ export interface DiscoveryConfiguration {
   createdAt: string;
 }
 
+export interface CreateDiscoveryRequest {
+  name: string;
+  discoveryType: "LDAP" | "CLOUD" | "FILESYSTEM" | "NETWORK";
+  configuration: Record<string, string>;
+  schedule?: string;
+  enabled?: boolean;
+}
+
+export interface DiscoveryResult {
+  id: number;
+  configurationId: number;
+  certificatesFound: number;
+  newCertificates: number;
+  existingCertificates: number;
+  status: "COMPLETED" | "FAILED" | "RUNNING";
+  startedAt: string;
+  completedAt?: string;
+  details: Record<string, unknown>[];
+}
+
+// Discovery Scan Requests
+export interface LDAPScanRequest {
+  server: string;
+  port: number;
+  baseDN: string;
+  username?: string;
+  password?: string;
+}
+
+export interface CloudScanRequest {
+  provider: "AWS" | "AZURE" | "GCP";
+  credentials: Record<string, string>;
+}
+
+export interface FilesystemScanRequest {
+  paths: string[];
+  fileExtensions?: string[];
+}
+
+export interface ScheduleDiscoveryRequest {
+  name: string;
+  type: "LDAP" | "CLOUD" | "FILESYSTEM";
+  schedule: string;
+  config: Record<string, unknown>;
+}
+
 // Auto Renew Configuration
 export interface AutoRenewConfiguration {
   id: number;
@@ -288,6 +384,11 @@ export interface AutoRenewConfiguration {
   maxRetries: number;
   lastRenewalAttempt?: string;
   createdAt: string;
+}
+
+export interface EnableAutoRenewRequest {
+  certificateId: number;
+  renewBeforeDays?: number;
 }
 
 // Certificate Template
@@ -303,9 +404,24 @@ export interface CertificateTemplate {
   createdAt: string;
 }
 
+export interface CreateCertificateTemplateRequest {
+  name: string;
+  description?: string;
+  caAlias?: string;
+  algorithm?: string;
+  keySize?: number;
+  validityDays?: number;
+  subjectTemplate?: string;
+}
+
 // Bulk Operations
 export interface BulkIssueRequest {
-  certificateRequests: string[];
+  certificates?: Array<{
+    commonName: string;
+    organization?: string;
+    caAlias?: string;
+  }>;
+  certificateRequests?: string[]; // Legacy support
 }
 
 export interface BulkRenewRequest {
@@ -314,16 +430,21 @@ export interface BulkRenewRequest {
 
 export interface BulkRevokeRequest {
   certificateIds: number[];
-  reason?: string;
+  reason?: RevokeReason;
 }
 
 export interface BulkOperationResult {
-  totalCount: number;
-  successCount: number;
-  failedCount: number;
+  totalRequested: number;
+  totalCount: number; // Legacy
+  successful: number;
+  successCount: number; // Legacy
+  failed: number;
+  failedCount: number; // Legacy
   results: Array<{
     id: number;
-    success: boolean;
+    status: "SUCCESS" | "FAILED";
+    success?: boolean;
+    message?: string;
     error?: string;
   }>;
 }
@@ -358,6 +479,24 @@ export interface UserSession {
   isActive: boolean;
 }
 
+export interface SessionAnalytics {
+  totalSessions: number;
+  activeSessions: number;
+  deviceBreakdown: Record<string, number>;
+  ipAddresses: string[];
+  averageSessionDuration: number;
+  loginFrequency: Record<string, number>;
+}
+
+export interface SuspiciousActivity {
+  userId: number;
+  username: string;
+  uniqueIps: number;
+  ipAddresses: string[];
+  lastActivityAt: string;
+  riskLevel: "LOW" | "MEDIUM" | "HIGH";
+}
+
 // Rate Limit
 export interface RateLimitViolation {
   id: number;
@@ -382,106 +521,132 @@ export interface RateLimitMetrics {
   }>;
 }
 
-// ACME Types
+// ACME Provider Types
 export interface AcmeProvider {
   id: number;
   name: string;
-  type: "LETS_ENCRYPT_PRODUCTION" | "LETS_ENCRYPT_STAGING" | "ZEROSSL" | "BUYPASS" | "CUSTOM";
   directoryUrl: string;
-  termsOfServiceUrl?: string;
-  website?: string;
-  isStaging: boolean;
-  isActive: boolean;
-  rateLimitPerWeek?: number;
-  requiresEab: boolean;
-  eabKid?: string;
-  eabHmacKey?: string;
+  providerType: "LETS_ENCRYPT" | "ZEROSSL" | "BUYPASS" | "GOOGLE_TRUST";
+  type: "LETS_ENCRYPT_PRODUCTION" | "LETS_ENCRYPT_STAGING" | "ZEROSSL" | "BUYPASS" | "CUSTOM"; // Legacy
   description?: string;
+  isActive: boolean;
+  isStaging?: boolean;
+  requiresEab?: boolean;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
 }
 
 export interface CreateAcmeProviderRequest {
   name: string;
   type: "LETS_ENCRYPT_PRODUCTION" | "LETS_ENCRYPT_STAGING" | "ZEROSSL" | "BUYPASS" | "CUSTOM";
   directoryUrl?: string;
+  providerType?: "LETS_ENCRYPT" | "ZEROSSL" | "BUYPASS" | "GOOGLE_TRUST";
+  description?: string;
   isStaging?: boolean;
   isActive?: boolean;
-  eabKid?: string;
-  eabHmacKey?: string;
-  description?: string;
 }
 
+// ACME Account
 export interface AcmeAccount {
   id: number;
+  providerId: number;
   email: string;
-  acmeServerUrl: string;
   accountUrl: string;
-  privateKey: string;
-  publicKey: string;
   status: string;
   termsAgreed: boolean;
   createdAt: string;
-  updatedAt: string;
-  createdBy: string;
+  updatedAt?: string;
 }
 
+// ACME Order
 export interface AcmeOrder {
   id: number;
   orderId: string;
-  status: "PENDING" | "PROCESSING" | "READY" | "VALID" | "INVALID" | "EXPIRED";
-  domains: string;
-  challengeType: "HTTP_01" | "DNS_01" | "TLS_ALPN_01";
-  expiresAt: string;
+  accountId: number;
+  orderUrl?: string;
+  status: "PENDING" | "PROCESSING" | "VALID" | "INVALID" | "READY" | "EXPIRED";
+  domains: string | string[];
+  challengeType?: "HTTP_01" | "DNS_01" | "TLS_ALPN_01";
+  expiresAt?: string;
+  notBefore?: string;
+  notAfter?: string;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
 }
 
 export interface CreateAcmeOrderRequest {
-  providerId: number;
   accountId: number;
   domains: string[];
-  challengeType?: "HTTP_01" | "DNS_01" | "TLS_ALPN_01";
-  notes?: string;
 }
 
+// ACME Authorization
 export interface AcmeAuthorization {
   id: number;
+  orderId: number;
   domain: string;
   status: "PENDING" | "PROCESSING" | "VALID" | "INVALID" | "EXPIRED" | "REVOKED";
-  expiresAt: string;
   authorizationUrl: string;
   isWildcard: boolean;
+  expiresAt: string;
   createdAt: string;
-  updatedAt: string;
-  challenges: AcmeChallenge[];
+  challenges?: AcmeChallenge[];
 }
 
+// ACME Challenge
 export interface AcmeChallenge {
   id: number;
+  authorizationId: number;
   type: "HTTP_01" | "DNS_01" | "TLS_ALPN_01";
   status: "PENDING" | "PROCESSING" | "VALID" | "INVALID";
   token: string;
   challengeUrl: string;
   validatedAt?: string;
   createdAt: string;
-  updatedAt: string;
 }
 
-// ACME Monitoring
+// ACME Renewal
+export interface AcmeRenewalStatus {
+  enabled: boolean;
+  ordersEnabledForAutoRenewal: number;
+  nextRenewalCheck?: string;
+}
+
+export interface EnableAcmeRenewalRequest {
+  orderId: number;
+  daysBeforeExpiry?: number;
+}
+
+export interface DisableAcmeRenewalRequest {
+  orderId: number;
+}
+
+// ACME Monitoring - Webhooks
 export interface AcmeWebhook {
   id: number;
-  name: string;
+  name?: string;
   url: string;
   events: string[];
-  secretKey?: string;
+  secret?: string;
   isActive: boolean;
   lastTriggered?: string;
   failureCount: number;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
 }
 
+export interface CreateAcmeWebhookRequest {
+  url: string;
+  events: ("ORDER_CREATED" | "ORDER_COMPLETED" | "ORDER_FAILED" | "CHALLENGE_VALIDATED" | "CERTIFICATE_ISSUED")[];
+  secret?: string;
+}
+
+export interface UpdateAcmeWebhookRequest {
+  url?: string;
+  events?: string[];
+  isActive?: boolean;
+}
+
+// ACME Monitoring - Metrics
 export interface AcmeMetrics {
   id: number;
   metricDate: string;
@@ -515,29 +680,30 @@ export interface AcmeDashboardSummary {
   recentOrders: AcmeOrder[];
 }
 
-// Certificate Operations
-export interface CertificateValidationResult {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
-  validFrom: string;
-  validTo: string;
-  issuer: string;
-  subject: string;
+export interface AcmeHealthStatus {
+  status: "HEALTHY" | "DEGRADED" | "UNHEALTHY";
+  providers: Array<{
+    name: string;
+    status: string;
+    lastCheck: string;
+  }>;
 }
 
-export interface CertificateComparisonResult {
-  areSame: boolean;
-  differences: string[];
+// Security
+export interface SAMLConfiguration {
+  entityId: string;
+  ssoUrl: string;
+  certificate: string;
+  attributeMapping?: Record<string, string>;
 }
 
-// Pagination
-export interface PaginatedResponse<T> {
-  content: T[];
-  totalElements: number;
-  totalPages: number;
-  size: number;
-  number: number;
+export interface MFAEnableRequest {
+  method: "TOTP" | "SMS" | "EMAIL";
+}
+
+export interface KeyRotationConfig {
+  rotationPeriodDays: number;
+  autoRotate: boolean;
 }
 
 // API Key Management
@@ -556,8 +722,10 @@ export interface ApiKey {
 
 export interface CreateApiKeyRequest {
   name: string;
-  permissions: string[];
-  expiresInDays?: number;
+  expiryDays?: number;
+  validityDays?: number; // Alias
+  scopes?: string[];
+  permissions?: string[]; // Alias
 }
 
 export interface CreateApiKeyResponse {
@@ -569,69 +737,52 @@ export interface CreateApiKeyResponse {
   expiresAt?: string;
 }
 
-// Session Analytics
-export interface SessionAnalytics {
-  totalSessions: number;
-  activeSessions: number;
-  deviceBreakdown: Record<string, number>;
-  ipAddresses: string[];
-  averageSessionDuration: number;
-  loginFrequency: Record<string, number>;
+// Certificate Operations
+export interface CertificateValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  validFrom: string;
+  validTo: string;
+  issuer: string;
+  subject: string;
 }
 
-export interface SuspiciousActivity {
-  userId: number;
-  username: string;
-  uniqueIps: number;
-  ipAddresses: string[];
-  lastActivityAt: string;
-  riskLevel: "LOW" | "MEDIUM" | "HIGH";
+export interface CertificateComparisonResult {
+  areSame: boolean;
+  differences: string[];
 }
 
-// Discovery Configuration
-export interface CreateDiscoveryRequest {
-  name: string;
-  discoveryType: "LDAP" | "CLOUD" | "FILESYSTEM" | "NETWORK";
-  configuration: Record<string, string>;
-  schedule?: string;
-  enabled?: boolean;
+export interface BackupRequest {
+  certificateIds: number[];
+  includePrivateKeys?: boolean;
 }
 
-export interface DiscoveryResult {
-  id: number;
-  configurationId: number;
-  certificatesFound: number;
-  newCertificates: number;
-  existingCertificates: number;
-  status: "COMPLETED" | "FAILED" | "RUNNING";
-  startedAt: string;
-  completedAt?: string;
-  details: Record<string, unknown>[];
+// Integrations
+export interface JenkinsConfig {
+  jenkinsUrl: string;
+  apiToken: string;
+  jobName: string;
 }
 
-// Certificate Template
-export interface CreateCertificateTemplateRequest {
-  name: string;
-  description?: string;
-  caAlias: string;
-  algorithm: string;
-  keySize: number;
-  validityDays: number;
-  subjectTemplate?: string;
+export interface KubernetesConfig {
+  kubeconfig: string;
+  namespace?: string;
 }
 
 // System Health
 export interface SystemHealth {
   status: "UP" | "DOWN" | "DEGRADED";
-  uptime: number;
-  version: string;
-  database: {
+  timestamp: string;
+  uptime?: number;
+  version?: string;
+  database?: {
     status: "UP" | "DOWN";
-    responseTime: number;
+    responseTime?: number;
   };
   redis?: {
     status: "UP" | "DOWN";
-    responseTime: number;
+    responseTime?: number;
   };
   acme?: {
     status: "UP" | "DOWN";
@@ -660,4 +811,13 @@ export interface ComplianceReport {
     issue: string;
     remediation: string;
   }>;
+}
+
+// Pagination
+export interface PaginatedResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
 }

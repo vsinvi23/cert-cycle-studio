@@ -104,7 +104,7 @@ export default function ApiKeys() {
         permissions: formData.permissions,
         validityDays: formData.expiresInDays,
       });
-      setGeneratedKey(response);
+      setGeneratedKey(response.keyPlainText || `certaxis_${response.id}`);
       toast.success("API key generated successfully");
       fetchApiKeys();
     } catch (error) {

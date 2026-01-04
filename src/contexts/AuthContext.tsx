@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { authApi, clearAuthToken } from "@/lib/api";
+import { authApi, clearAuthToken, setAuthToken, getAuthToken } from "@/lib/api";
 
 interface User {
   id: string;
@@ -24,14 +24,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Check for existing session on mount
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-    const storedToken = localStorage.getItem("certaxis_token");
+    const storedToken = localStorage.getItem("certaxis_token") || localStorage.getItem("authToken");
     
     if (storedUser && storedToken) {
       try {
         setUser(JSON.parse(storedUser));
+        setAuthToken(storedToken);
       } catch {
         localStorage.removeItem("user");
         localStorage.removeItem("certaxis_token");
+        localStorage.removeItem("authToken");
       }
     }
     setIsLoading(false);
@@ -40,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (username: string, password: string) => {
     try {
       // Call the CertAxis login API
-      await authApi.login({ username, password });
+      const response = await authApi.login({ username, password });
       
       // Create user object from successful login
       const loggedInUser: User = {
@@ -51,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setUser(loggedInUser);
       localStorage.setItem("user", JSON.stringify(loggedInUser));
+      localStorage.setItem("certaxis_token", response.token);
     } catch (error) {
       // Clear any existing token on failed login
       clearAuthToken();
@@ -74,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authApi.logout();
     setUser(null);
     localStorage.removeItem("user");
+    localStorage.removeItem("certaxis_token");
   };
 
   return (

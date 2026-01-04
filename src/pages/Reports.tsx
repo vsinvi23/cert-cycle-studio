@@ -20,8 +20,8 @@ export default function Reports() {
   const [compliance, setCompliance] = useState<ComplianceScore | null>(null);
   const [health, setHealth] = useState<CertificateHealth | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [exportFormat, setExportFormat] = useState("json");
-  const [complianceStandard, setComplianceStandard] = useState("PCI-DSS");
+  const [exportFormat, setExportFormat] = useState<"JSON" | "PDF" | "CSV">("JSON");
+  const [complianceStandard, setComplianceStandard] = useState<"PCI-DSS" | "SOC2" | "GDPR" | "NIST">("PCI-DSS");
   const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
@@ -50,7 +50,7 @@ export default function Reports() {
       
       // Create download
       const blob = new Blob([typeof report === 'string' ? report : JSON.stringify(report, null, 2)], {
-        type: exportFormat === 'json' ? 'application/json' : exportFormat === 'csv' ? 'text/csv' : 'application/pdf'
+        type: exportFormat === 'JSON' ? 'application/json' : exportFormat === 'CSV' ? 'text/csv' : 'application/pdf'
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -145,14 +145,14 @@ export default function Reports() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Select value={exportFormat} onValueChange={setExportFormat}>
+            <Select value={exportFormat} onValueChange={(v) => setExportFormat(v as "JSON" | "PDF" | "CSV")}>
               <SelectTrigger className="w-[100px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="json">JSON</SelectItem>
-                <SelectItem value="csv">CSV</SelectItem>
-                <SelectItem value="pdf">PDF</SelectItem>
+                <SelectItem value="JSON">JSON</SelectItem>
+                <SelectItem value="CSV">CSV</SelectItem>
+                <SelectItem value="PDF">PDF</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline" onClick={handleExport} disabled={isExporting}>
@@ -230,7 +230,7 @@ export default function Reports() {
                   <CardDescription>Certificate compliance metrics</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Select value={complianceStandard} onValueChange={setComplianceStandard}>
+                  <Select value={complianceStandard} onValueChange={(v) => setComplianceStandard(v as "PCI-DSS" | "SOC2" | "GDPR" | "NIST")}>
                     <SelectTrigger className="w-[120px]">
                       <SelectValue />
                     </SelectTrigger>
