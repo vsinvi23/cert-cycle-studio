@@ -192,19 +192,25 @@ export interface ImportCARequest {
 }
 
 export interface CertificateAuthority {
-  id: number;
+  id?: number;
   alias: string;
-  commonName: string;
+  commonName?: string;
+  distinguishedName?: string;
   organization?: string;
   organizationalUnit?: string;
   locality?: string;
   state?: string;
   country?: string;
-  signatureAlgorithm: string;
-  validFrom: string;
-  validTo: string;
-  status: "ACTIVE" | "REVOKED" | "EXPIRED";
-  createdAt: string;
+  signatureAlgorithm?: string;
+  keyAlgorithm?: string;
+  keySize?: number;
+  validFrom?: string;
+  validTo?: string;
+  issuedAt?: string;
+  expiresAt?: string;
+  status?: "ACTIVE" | "REVOKED" | "EXPIRED";
+  revoked?: boolean;
+  createdAt?: string;
 }
 
 // User Certificate Request
