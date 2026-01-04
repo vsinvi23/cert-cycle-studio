@@ -44,45 +44,12 @@ export default function ApiKeys() {
   const fetchApiKeys = async () => {
     try {
       setLoading(true);
-      // Mock data for demonstration
-      const mockKeys: ApiKey[] = [
-        {
-          id: 1,
-          name: "Production Monitoring",
-          keyPrefix: "certaxis_prod",
-          permissions: ["certificate:read", "reports:read"],
-          expiresAt: "2026-12-31T23:59:59Z",
-          lastUsedAt: "2025-12-29T10:30:00Z",
-          lastUsedIp: "192.168.1.100",
-          enabled: true,
-          createdAt: "2025-01-15T10:00:00Z",
-          createdBy: "admin",
-        },
-        {
-          id: 2,
-          name: "CI/CD Pipeline",
-          keyPrefix: "certaxis_cicd",
-          permissions: ["certificate:*", "ca:read"],
-          expiresAt: "2025-06-30T23:59:59Z",
-          lastUsedAt: "2025-12-28T15:45:00Z",
-          lastUsedIp: "10.0.0.50",
-          enabled: true,
-          createdAt: "2025-03-01T09:00:00Z",
-          createdBy: "admin",
-        },
-        {
-          id: 3,
-          name: "External Integration",
-          keyPrefix: "certaxis_ext",
-          permissions: ["certificate:read"],
-          enabled: false,
-          createdAt: "2025-02-01T14:00:00Z",
-          createdBy: "admin",
-        },
-      ];
-      setApiKeys(mockKeys);
+      const data = await securityApi.getApiKeys();
+      setApiKeys(data || []);
     } catch (error) {
-      toast.error("Failed to fetch API keys");
+      console.error("Failed to fetch API keys:", error);
+      // Fallback to empty array if API fails
+      setApiKeys([]);
     } finally {
       setLoading(false);
     }
@@ -124,6 +91,7 @@ export default function ApiKeys() {
 
   const handleRevokeKey = async (keyId: number) => {
     try {
+      await securityApi.revokeApiKey(keyId);
       toast.success("API key revoked successfully");
       fetchApiKeys();
     } catch (error) {

@@ -11,6 +11,13 @@ import type {
 
 export const alertsApi = {
   /**
+   * GET /api/alerts/configurations
+   * Get all alert configurations
+   */
+  getConfigurations: () =>
+    apiRequest<AlertConfiguration[]>("/api/alerts/configurations"),
+
+  /**
    * POST /api/alerts/configure
    * Configure alert
    */

@@ -93,8 +93,12 @@ export default function NetworkScan() {
     setDiscoveredCerts([]);
 
     try {
+      // Parse the network range input into target objects
+      const targetHosts = networkRange.split(',').map(t => t.trim()).filter(Boolean);
+      const targets = targetHosts.map(host => ({ host }));
+      
       const results = await networkScanApi.scan({
-        targets: networkRange,
+        targets,
         ports: "443,8443,8080",
       });
 
