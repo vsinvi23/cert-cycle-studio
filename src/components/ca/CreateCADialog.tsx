@@ -76,28 +76,19 @@ export function CreateCADialog({ onSuccess }: CreateCADialogProps) {
     },
   });
 
-  const getAlgorithmAndKeySize = (signatureAlgorithm: string): { algorithm: "RSA" | "ECDSA"; keySize: number } => {
-    switch (signatureAlgorithm) {
-      case "RSA2048": return { algorithm: "RSA", keySize: 2048 };
-      case "RSA3072": return { algorithm: "RSA", keySize: 3072 };
-      case "RSA4096": return { algorithm: "RSA", keySize: 4096 };
-      case "ECDSA_P256": return { algorithm: "ECDSA", keySize: 256 };
-      case "ECDSA_P384": return { algorithm: "ECDSA", keySize: 384 };
-      default: return { algorithm: "RSA", keySize: 2048 };
-    }
-  };
-
   const onSubmit = async (data: CreateCAFormValues) => {
     setIsLoading(true);
     try {
-      const { algorithm, keySize } = getAlgorithmAndKeySize(data.signatureAlgorithm);
-      
       await caApi.create({
         alias: data.alias,
         cn: data.commonName,
-        algorithm,
-        keySize,
-        validityDays: data.validityInDays,
+        organization: data.organization,
+        organizationalUnit: data.organizationalUnit,
+        locality: data.locality,
+        state: data.state,
+        country: data.country,
+        signatureAlgorithm: data.signatureAlgorithm,
+        validityInDays: data.validityInDays,
       });
       
       toast({

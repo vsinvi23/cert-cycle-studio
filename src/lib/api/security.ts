@@ -3,8 +3,6 @@ import type {
   Role, 
   CreateRoleRequest,
   SAMLConfiguration,
-  MFAEnableRequest,
-  KeyRotationConfig,
   CreateApiKeyRequest,
   CreateApiKeyResponse
 } from "./types";
@@ -61,10 +59,9 @@ export const securityApi = {
    * POST /api/security/mfa/enable
    * Enable Multi-Factor Authentication
    */
-  enableMFA: async (request: MFAEnableRequest): Promise<string> => {
-    return apiRequest<string>("/api/security/mfa/enable", {
+  enableMFA: async (userId: number, method: "TOTP" | "SMS" | "EMAIL"): Promise<string> => {
+    return apiRequest<string>(`/api/security/mfa/enable?userId=${userId}&method=${method}`, {
       method: "POST",
-      body: JSON.stringify(request),
     });
   },
 
@@ -105,10 +102,9 @@ export const securityApi = {
    * POST /api/security/keys/rotation/configure
    * Configure key rotation
    */
-  configureKeyRotation: async (config: KeyRotationConfig): Promise<string> => {
-    return apiRequest<string>("/api/security/keys/rotation/configure", {
+  configureKeyRotation: async (rotationDays: number, autoRotate: boolean = false): Promise<string> => {
+    return apiRequest<string>(`/api/security/keys/rotation/configure?rotationDays=${rotationDays}&autoRotate=${autoRotate}`, {
       method: "POST",
-      body: JSON.stringify(config),
     });
   },
 };

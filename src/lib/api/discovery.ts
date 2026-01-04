@@ -5,7 +5,6 @@ import type {
   CreateDiscoveryRequest,
   LDAPScanRequest,
   CloudScanRequest,
-  FilesystemScanRequest,
   ScheduleDiscoveryRequest
 } from "./types";
 
@@ -91,8 +90,8 @@ export const discoveryApi = {
    * POST /api/discovery/scan/cloud
    * Cloud provider scanning (AWS/Azure/GCP)
    */
-  scanCloud: async (config: CloudScanRequest): Promise<string> => {
-    return apiRequest<string>("/api/discovery/scan/cloud", {
+  scanCloud: async (provider: "aws" | "azure" | "gcp", config: CloudScanRequest): Promise<string> => {
+    return apiRequest<string>(`/api/discovery/scan/cloud?provider=${provider}`, {
       method: "POST",
       body: JSON.stringify(config),
     });
@@ -102,10 +101,9 @@ export const discoveryApi = {
    * POST /api/discovery/scan/filesystem
    * Filesystem certificate scanning
    */
-  scanFilesystem: async (config: FilesystemScanRequest): Promise<string> => {
-    return apiRequest<string>("/api/discovery/scan/filesystem", {
+  scanFilesystem: async (path: string): Promise<string> => {
+    return apiRequest<string>(`/api/discovery/scan/filesystem?path=${encodeURIComponent(path)}`, {
       method: "POST",
-      body: JSON.stringify(config),
     });
   },
 

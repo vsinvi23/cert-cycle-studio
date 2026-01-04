@@ -19,11 +19,12 @@ export const certOperationsApi = {
     apiRequest<Array<{ ids: number[]; reason: string }>>('/api/certificate-operations/detect-duplicates'),
 
   // Backup certificates
-  backup: (certificateIds: number[]) =>
-    apiRequest<string>('/api/certificate-operations/backup', {
+  backup: (certificateIds: number[]) => {
+    const params = certificateIds.map(id => `certificateIds=${id}`).join('&');
+    return apiRequest<string>(`/api/certificate-operations/backup?${params}`, {
       method: 'POST',
-      body: JSON.stringify({ certificateIds }),
-    }),
+    });
+  },
 
   // Restore certificates from backup
   restore: (backupData: Record<string, unknown>) =>
