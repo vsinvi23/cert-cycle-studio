@@ -32,11 +32,37 @@ export default function ViewCA() {
     setIsLoading(true);
     try {
       const response = await caApi.list();
+      let caList: CertificateAuthority[] = [];
       if (Array.isArray(response)) {
-        setCas(response);
-      } else if (response && typeof response === 'object' && 'content' in (response as Record<string, unknown>)) {
-        setCas((response as { content: typeof cas }).content);
+        caList = response;
+      } else if (response && typeof response === 'object') {
+        if ('results' in (response as Record<string, unknown>)) {
+          caList = (response as { results: CertificateAuthority[] }).results;
+        } else if ('content' in (response as Record<string, unknown>)) {
+          caList = (response as { content: CertificateAuthority[] }).content;
+        }
       }
+      // Parse distinguishedName to extract fields
+      const parsedCAs = caList.map((ca) => {
+        const dnParts = ca.distinguishedName?.split(',').reduce((acc, part) => {
+          const [key, value] = part.trim().split('=');
+          acc[key] = value;
+          return acc;
+        }, {} as Record<string, string>) || {};
+        
+        return {
+          ...ca,
+          commonName: dnParts['CN'] || ca.commonName || ca.alias,
+          organization: dnParts['O'] || ca.organization,
+          organizationalUnit: dnParts['OU'] || ca.organizationalUnit,
+          locality: dnParts['L'] || ca.locality,
+          state: dnParts['ST'] || ca.state,
+          country: dnParts['C'] || ca.country,
+          validFrom: ca.issuedAt || ca.validFrom,
+          validTo: ca.expiresAt || ca.validTo,
+        };
+      });
+      setCas(parsedCAs);
     } catch (error) {
       console.error("Failed to fetch CAs:", error);
       toast({
@@ -101,8 +127,13 @@ export default function ViewCA() {
       ca.organization?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getStatusBadge = (status: CertificateAuthority["status"]) => {
-    switch (status) {
+  const getStatusBadge = (ca: CertificateAuthority) => {
+    // Check revoked field first (from API response)
+    if (ca.revoked === true) {
+      return <Badge variant="destructive">Revoked</Badge>;
+    }
+    // Then check status field
+    switch (ca.status) {
       case "ACTIVE":
         return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">Active</Badge>;
       case "REVOKED":
@@ -110,7 +141,8 @@ export default function ViewCA() {
       case "EXPIRED":
         return <Badge variant="secondary">Expired</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        // Default to Active if revoked is false and no status
+        return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">Active</Badge>;
     }
   };
 
@@ -182,10 +214,10 @@ export default function ViewCA() {
                         <TableCell>{new Date(ca.validFrom).toLocaleDateString()}</TableCell>
                         <TableCell>{new Date(ca.validTo).toLocaleDateString()}</TableCell>
                         <TableCell className="font-mono text-sm">{ca.alias}</TableCell>
-                        <TableCell>{getStatusBadge(ca.status)}</TableCell>
+                        <TableCell>{getStatusBadge(ca)}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            {ca.status === "ACTIVE" && (
+                            {!ca.revoked && ca.status !== "REVOKED" && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
