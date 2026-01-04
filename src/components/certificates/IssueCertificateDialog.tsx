@@ -439,7 +439,7 @@ export function IssueCertificateDialog({ onSuccess }: IssueCertificateDialogProp
                             Loading CAs...
                           </div>
                         ) : cas.length > 0 ? (
-                          cas.map((ca) => {
+                          cas.filter((ca) => !ca.revoked).map((ca) => {
                             const cnMatch = ca.distinguishedName?.split(',').find((p) => p.trim().startsWith('CN='));
                             const displayName = cnMatch ? cnMatch.replace('CN=', '') : ca.commonName || ca.alias;
                             return (
