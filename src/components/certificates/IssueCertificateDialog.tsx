@@ -57,6 +57,8 @@ const purposeOptions = [
 const certificateRequestSchema = z.object({
   csrType: z.enum(["with-csr", "without-csr"]),
   csrContent: z.string().optional(),
+  host: z.string().min(1, "Host is required").max(255),
+  port: z.coerce.number().min(1, "Port must be at least 1").max(65535, "Port must be at most 65535").optional(),
   commonName: z.string().min(1, "Common name is required").max(100),
   organization: z.string().min(1, "Organization is required").max(100),
   organizationalUnit: z.string().max(100).optional(),
@@ -122,6 +124,8 @@ export function IssueCertificateDialog({ onSuccess }: IssueCertificateDialogProp
     defaultValues: {
       csrType: "without-csr",
       csrContent: "",
+      host: "",
+      port: undefined,
       commonName: "",
       organization: "",
       organizationalUnit: "",
@@ -143,7 +147,7 @@ export function IssueCertificateDialog({ onSuccess }: IssueCertificateDialogProp
     setIsSubmitting(true);
     try {
       // Call API to issue certificate
-      await certificatesApi.issueUserCertificate({
+      await certificatesApi.createUserCertificate({
         commonName: data.commonName,
         organization: data.organization,
         organizationalUnit: data.organizationalUnit,
@@ -281,6 +285,37 @@ export function IssueCertificateDialog({ onSuccess }: IssueCertificateDialogProp
                 </FormItem>
               )}
             />
+
+            {/* Host and Port Fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="host"
+                render={({ field }) => (
+                  <FormItem className="sm:col-span-2">
+                    <FormLabel>Host *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="example.com or 192.168.1.1" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="port"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Port</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="443" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}

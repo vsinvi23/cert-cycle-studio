@@ -23,9 +23,31 @@ import {
   FolderCog,
   PanelLeftClose,
   PanelLeft,
+  ShieldCheck,
+  Activity,
+  TrendingUp,
+  CheckCircle2,
+  Globe,
+  Cpu,
+  Lock,
+  UserCog,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
+
+// Permission requirements for menu items
+const PERMISSION_MAP: Record<string, string[]> = {
+  "Certificates": ["CERT_READ"],
+  "Issue Certificate": ["CERT_CREATE"],
+  "Renewals": ["CERT_READ"],
+  "Network Scan": ["CERT_READ"],
+  "Users": ["USER_MANAGE"],
+  "Roles": ["USER_MANAGE"],
+  "Bulk Operations": ["CERT_CREATE", "CERT_UPDATE"],
+  "API Keys": ["SYSTEM_CONFIG"],
+  "Reports": ["CERT_READ"],
+  "Audit Logs": ["AUDIT_READ"],
+};
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -51,43 +73,87 @@ const navItems = [
   { title: "My Requests", url: "/workspace/my-request", icon: Briefcase },
 ];
 
+// Certificate Management
 const certificateItems = [
   { title: "Certificates", url: "/ca-management/view", icon: FileKey },
   { title: "Issue Certificate", url: "/certificate-management/issue", icon: ShieldPlus },
   { title: "Renewals", url: "/renewals", icon: RefreshCw },
+  { title: "Certificate Templates", url: "/certificate-templates", icon: FileText },
+];
+
+// Discovery & Scanning
+const discoveryItems = [
   { title: "Network Scan", url: "/network-scan", icon: Radar },
   { title: "Discovery", url: "/discovery", icon: Search },
 ];
 
-const configurationItems = [
-  { title: "ACME", url: "/acme-management", icon: Zap },
-  { title: "Alerts", url: "/alerts", icon: Bell },
-  { title: "Jobs", url: "/jobs", icon: Clock },
-  { title: "Users", url: "/user-management/manage", icon: Users },
+// ACME & Integration
+const acmeItems = [
+  { title: "ACME Management", url: "/acme-management", icon: Zap },
+  { title: "ACME Monitoring", url: "/acme-monitoring", icon: Activity },
+];
+
+// Operations & Jobs
+const operationsItems = [
   { title: "Bulk Operations", url: "/bulk-operations", icon: Layers },
+  { title: "Background Jobs", url: "/jobs", icon: Clock },
+];
+
+// Security & Access Control
+const securityItems = [
+  { title: "Users", url: "/user-management/manage", icon: Users },
+  { title: "Roles", url: "/manage-role", icon: Shield },
+  { title: "Permissions", url: "/permissions", icon: Lock },
   { title: "API Keys", url: "/api-keys", icon: Key },
+  { title: "Sessions", url: "/sessions", icon: UserCog },
+];
+
+// Monitoring & Alerts
+const monitoringItems = [
+  { title: "Alerts", url: "/alerts", icon: Bell },
+  { title: "Rate Limits", url: "/rate-limits", icon: TrendingUp },
+];
+
+// Reports & Compliance
+const reportsItems = [
   { title: "Reports", url: "/reports", icon: BarChart3 },
+  { title: "Compliance", url: "/compliance", icon: CheckCircle2 },
   { title: "Audit Logs", url: "/audit-logs", icon: FileText },
 ];
 
 export function AppSidebar() {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   
   const isCertificateActive = certificateItems.some(item => location.pathname.startsWith(item.url));
-  const isConfigurationActive = configurationItems.some(item => location.pathname.startsWith(item.url));
+  const isDiscoveryActive = discoveryItems.some(item => location.pathname.startsWith(item.url));
+  const isAcmeActive = acmeItems.some(item => location.pathname.startsWith(item.url));
+  const isOperationsActive = operationsItems.some(item => location.pathname.startsWith(item.url));
+  const isSecurityActive = securityItems.some(item => location.pathname.startsWith(item.url));
+  const isMonitoringActive = monitoringItems.some(item => location.pathname.startsWith(item.url));
+  const isReportsActive = reportsItems.some(item => location.pathname.startsWith(item.url));
   
   const [certificatesOpen, setCertificatesOpen] = useState(isCertificateActive);
-  const [configurationOpen, setConfigurationOpen] = useState(isConfigurationActive);
+  const [discoveryOpen, setDiscoveryOpen] = useState(isDiscoveryActive);
+  const [acmeOpen, setAcmeOpen] = useState(isAcmeActive);
+  const [operationsOpen, setOperationsOpen] = useState(isOperationsActive);
+  const [securityOpen, setSecurityOpen] = useState(isSecurityActive);
+  const [monitoringOpen, setMonitoringOpen] = useState(isMonitoringActive);
+  const [reportsOpen, setReportsOpen] = useState(isReportsActive);
 
   // Keep sections open when navigating to their items
   useEffect(() => {
     if (isCertificateActive) setCertificatesOpen(true);
-    if (isConfigurationActive) setConfigurationOpen(true);
-  }, [isCertificateActive, isConfigurationActive]);
+    if (isDiscoveryActive) setDiscoveryOpen(true);
+    if (isAcmeActive) setAcmeOpen(true);
+    if (isOperationsActive) setOperationsOpen(true);
+    if (isSecurityActive) setSecurityOpen(true);
+    if (isMonitoringActive) setMonitoringOpen(true);
+    if (isReportsActive) setReportsOpen(true);
+  }, [isCertificateActive, isDiscoveryActive, isAcmeActive, isOperationsActive, isSecurityActive, isMonitoringActive, isReportsActive]);
 
   const handleLogout = () => {
     logout();
@@ -225,7 +291,7 @@ export function AppSidebar() {
           {navItems.map((item) => renderNavItem(item))}
         </SidebarMenu>
 
-        {/* Certificates Section */}
+        {/* Certificate Management */}
         <div className="mt-2">
           {renderCollapsibleSection(
             "Certificates",
@@ -237,15 +303,75 @@ export function AppSidebar() {
           )}
         </div>
 
-        {/* Configuration Section */}
+        {/* Discovery & Scanning */}
         <div className="mt-1">
           {renderCollapsibleSection(
-            "Configuration",
-            FolderCog,
-            configurationItems,
-            configurationOpen,
-            setConfigurationOpen,
-            isConfigurationActive
+            "Discovery",
+            Search,
+            discoveryItems,
+            discoveryOpen,
+            setDiscoveryOpen,
+            isDiscoveryActive
+          )}
+        </div>
+
+        {/* ACME & Integration */}
+        <div className="mt-1">
+          {renderCollapsibleSection(
+            "ACME",
+            Zap,
+            acmeItems,
+            acmeOpen,
+            setAcmeOpen,
+            isAcmeActive
+          )}
+        </div>
+
+        {/* Operations & Jobs */}
+        <div className="mt-1">
+          {renderCollapsibleSection(
+            "Operations",
+            Cpu,
+            operationsItems,
+            operationsOpen,
+            setOperationsOpen,
+            isOperationsActive
+          )}
+        </div>
+
+        {/* Security & Access Control */}
+        <div className="mt-1">
+          {renderCollapsibleSection(
+            "Security",
+            Lock,
+            securityItems,
+            securityOpen,
+            setSecurityOpen,
+            isSecurityActive
+          )}
+        </div>
+
+        {/* Monitoring & Alerts */}
+        <div className="mt-1">
+          {renderCollapsibleSection(
+            "Monitoring",
+            Activity,
+            monitoringItems,
+            monitoringOpen,
+            setMonitoringOpen,
+            isMonitoringActive
+          )}
+        </div>
+
+        {/* Reports & Compliance */}
+        <div className="mt-1">
+          {renderCollapsibleSection(
+            "Reports",
+            BarChart3,
+            reportsItems,
+            reportsOpen,
+            setReportsOpen,
+            isReportsActive
           )}
         </div>
       </SidebarContent>

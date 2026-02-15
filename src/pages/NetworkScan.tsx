@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -19,11 +20,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Radar, Shield, AlertTriangle, CheckCircle, XCircle, Loader2, Globe, Eye, FilePlus, Filter } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { Search, Radar, Shield, AlertTriangle, CheckCircle, XCircle, Loader2, Globe, Eye, FilePlus, Filter, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { toast } from "sonner";
+import { SearchBar } from "@/components/ui/search-bar";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { CertificateDetailsDialog } from "@/components/network-scan/CertificateDetailsDialog";
 import { RequestCertificateDialog } from "@/components/network-scan/RequestCertificateDialog";
-import { networkScanApi } from "@/lib/api";
+import { networkScanApi, nmapApi } from "@/lib/api";
 import type { NmapCertificateScan } from "@/lib/api/types";
 
 interface DiscoveredCertificate {
@@ -40,15 +43,73 @@ interface DiscoveredCertificate {
 }
 
 export default function NetworkScan() {
+  // Scan tab state
   const [networkRange, setNetworkRange] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [discoveredCerts, setDiscoveredCerts] = useState<DiscoveredCertificate[]>([]);
+  
+  // Certificate list tab state (paginated from backend)
+  const [allCertificates, setAllCertificates] = useState<NmapCertificateScan[]>([]);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [portFilter, setPortFilter] = useState<string>("all");
+  const [expiryFilter, setExpiryFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [sortBy, setSortBy] = useState("id");
+  const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("ASC");
+  
+  // Legacy scan results filters
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [protocolFilter, setProtocolFilter] = useState<string>("all");
+  
+  // Dialog state
   const [selectedCert, setSelectedCert] = useState<DiscoveredCertificate | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+
+  // Fetch all certificates from backend with pagination
+  useEffect(() => {
+    fetchAllCertificates();
+  }, [currentPage, pageSize, searchQuery, portFilter, expiryFilter, sortBy, sortOrder]);
+
+  const fetchAllCertificates = async () => {
+    setLoading(true);
+    try {
+      const data = await nmapApi.getAllCertificates({
+        page: currentPage,
+        size: pageSize,
+        search: searchQuery || undefined,
+        port: portFilter !== "all" ? portFilter : undefined,
+        expiryDays: expiryFilter !== "all" ? parseInt(expiryFilter) : undefined,
+        sortBy,
+        sortOrder,
+      });
+      
+      // Handle paginated response (Spring Boot PageImpl format)
+      if (data && typeof data === 'object' && 'content' in data) {
+        setAllCertificates(Array.isArray(data.content) ? data.content : []);
+        setTotalPages(data.totalPages || 0);
+        setTotalElements(data.totalElements || 0);
+      } else {
+        // Fallback for non-paginated responses
+        const certs = Array.isArray(data) ? data : [];
+        setAllCertificates(certs);
+        setTotalElements(certs.length);
+        setTotalPages(1);
+      }
+    } catch (error: any) {
+      console.error("Failed to fetch certificates:", error);
+      toast.error("Failed to load certificates");
+      setAllCertificates([]);
+      setTotalElements(0);
+      setTotalPages(0);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const calculateDaysToExpiry = (validTo: string): number => {
     const expiryDate = new Date(validTo);
@@ -63,29 +124,32 @@ export default function NetworkScan() {
     return "valid";
   };
 
-  const mapApiResponseToDiscoveredCert = (cert: NmapCertificateScan): DiscoveredCertificate => {
-    const daysToExpiry = calculateDaysToExpiry(cert.validTo);
+  const mapApiResponseToDiscoveredCert = (cert: NmapCertificateScan): DiscoveredCertificate | null => {
+    // Skip certificates with errors or missing data
+    if (cert.error || !cert.notAfter || !cert.notBefore) {
+      return null;
+    }
+    
+    const daysToExpiry = calculateDaysToExpiry(cert.notAfter);
+    const ports = cert.portsCsv?.split(',').map(p => parseInt(p.trim())).filter(p => !isNaN(p)) || [];
+    
     return {
       id: String(cert.id),
       endpoint: cert.host,
-      port: cert.port,
-      commonName: cert.commonName,
-      issuer: cert.issuer,
-      validFrom: cert.validFrom,
-      validTo: cert.validTo,
+      port: ports[0] || 443,
+      commonName: cert.host, // Use host as commonName since it's not in the response
+      issuer: cert.issuerCA || 'Unknown',
+      validFrom: cert.notBefore,
+      validTo: cert.notAfter,
       daysToExpiry,
-      protocol: `TLS (${cert.algorithm})`,
+      protocol: `TLS (${cert.algorithm || 'Unknown'})`,
       status: getStatus(daysToExpiry),
     };
   };
 
   const handleScan = async () => {
     if (!networkRange.trim()) {
-      toast({
-        title: "Network Range Required",
-        description: "Please enter a network range or IP address to scan.",
-        variant: "destructive",
-      });
+      toast.error("Please enter a network range or IP address to scan.");
       return;
     }
 
@@ -95,27 +159,42 @@ export default function NetworkScan() {
     try {
       // Parse the network range input into target objects
       const targetHosts = networkRange.split(',').map(t => t.trim()).filter(Boolean);
-      const targets = targetHosts.map(host => ({ host }));
+      
+      const targets = targetHosts.map(input => {
+        // Check if input contains a port (format: host:port)
+        const portMatch = input.match(/^(.+):(\d+)$/);
+        
+        if (portMatch) {
+          // User specified a port, use only that port
+          const host = portMatch[1];
+          const port = parseInt(portMatch[2]);
+          return {
+            host,
+            ports: [{ port }]
+          };
+        } else {
+          // No port specified, scan without ports (let backend handle default behavior)
+          return {
+            host: input,
+            ports: []
+          };
+        }
+      });
       
       const results = await networkScanApi.scan({
         targets,
-        ports: "443,8443,8080",
       });
 
-      const mappedCerts = (Array.isArray(results) ? results : [results]).map(mapApiResponseToDiscoveredCert);
+      const mappedCerts = (Array.isArray(results) ? results : [results])
+        .map(mapApiResponseToDiscoveredCert)
+        .filter((cert): cert is DiscoveredCertificate => cert !== null);
+      
       setDiscoveredCerts(mappedCerts);
       
-      toast({
-        title: "Scan Complete",
-        description: `Discovered ${mappedCerts.length} certificate endpoints.`,
-      });
+      toast.success(`Discovered ${mappedCerts.length} certificate endpoints.`);
     } catch (error) {
       console.error("Scan failed:", error);
-      toast({
-        title: "Scan Failed",
-        description: "Failed to perform network scan. Please check your connection.",
-        variant: "destructive",
-      });
+      toast.error("Failed to perform network scan. Please check your connection.");
     } finally {
       setIsScanning(false);
     }
@@ -172,22 +251,273 @@ export default function NetworkScan() {
 
   const uniqueProtocols = [...new Set(discoveredCerts.map((c) => c.protocol))];
 
-  const validCount = discoveredCerts.filter((c) => c.status === "valid").length;
-  const expiringCount = discoveredCerts.filter((c) => c.status === "expiring").length;
-  const expiredCount = discoveredCerts.filter((c) => c.status === "expired").length;
+  const validCount = allCertificates.filter((c) => !c.error && c.notAfter && calculateDaysToExpiry(c.notAfter) > 30).length;
+  const expiringCount = allCertificates.filter((c) => !c.error && c.notAfter && calculateDaysToExpiry(c.notAfter) > 0 && calculateDaysToExpiry(c.notAfter) <= 30).length;
+  const expiredCount = allCertificates.filter((c) => !c.error && c.notAfter && calculateDaysToExpiry(c.notAfter) < 0).length;
+
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === "ASC" ? "DESC" : "ASC");
+    } else {
+      setSortBy(field);
+      setSortOrder("ASC");
+    }
+    setCurrentPage(0);
+  };
 
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Network Certificate Scanner</h1>
-          <p className="text-muted-foreground">
-            Discover and analyze SSL/TLS certificates across your network
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Network Certificate Scanner</h1>
+            <p className="text-muted-foreground">
+              Discover and analyze SSL/TLS certificates across your network
+            </p>
+          </div>
+          <Button variant="outline" onClick={fetchAllCertificates}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
         </div>
 
-        {/* Scan Input */}
-        <Card>
+        {/* Summary Cards */}
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalElements}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Valid</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-500">{validCount}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Expiring Soon</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-500">{expiringCount}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Expired</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-500">{expiredCount}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Tabs defaultValue="certificates" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="certificates">
+              <Globe className="mr-2 h-4 w-4" />
+              All Certificates
+            </TabsTrigger>
+            <TabsTrigger value="scan">
+              <Radar className="mr-2 h-4 w-4" />
+              Network Scan
+            </TabsTrigger>
+          </TabsList>
+
+          {/* All Certificates Tab */}
+          <TabsContent value="certificates" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col gap-4">
+                  <CardTitle>Scanned Certificates ({totalElements} total)</CardTitle>
+                  
+                  {/* Search and Filters Row */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <SearchBar
+                      value={searchQuery}
+                      onChange={(value) => {
+                        setSearchQuery(value);
+                        setCurrentPage(0);
+                      }}
+                      placeholder="Search by host, IP, issuer..."
+                    />
+                    <Select value={portFilter} onValueChange={(value) => { setPortFilter(value); setCurrentPage(0); }}>
+                      <SelectTrigger className="w-[150px]">
+                        <SelectValue placeholder="Port" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Ports</SelectItem>
+                        <SelectItem value="443">443</SelectItem>
+                        <SelectItem value="8443">8443</SelectItem>
+                        <SelectItem value="8080">8080</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={expiryFilter} onValueChange={(value) => { setExpiryFilter(value); setCurrentPage(0); }}>
+                      <SelectTrigger className="w-[150px]">
+                        <SelectValue placeholder="Expiry" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="7">7 days</SelectItem>
+                        <SelectItem value="30">30 days</SelectItem>
+                        <SelectItem value="90">90 days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Sorting Controls */}
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 border-t pt-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-muted-foreground">Sort by:</span>
+                      <Select
+                        value={sortBy}
+                        onValueChange={(value) => {
+                          setSortBy(value);
+                          setCurrentPage(0);
+                        }}
+                      >
+                        <SelectTrigger className="w-[180px] h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="id">ID</SelectItem>
+                          <SelectItem value="host">Host</SelectItem>
+                          <SelectItem value="createdAt">Created Date</SelectItem>
+                          <SelectItem value="notBefore">Valid From</SelectItem>
+                          <SelectItem value="notAfter">Valid To</SelectItem>
+                          <SelectItem value="algorithm">Algorithm</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-muted-foreground">Order:</span>
+                      <div className="flex gap-1">
+                        <Button
+                          variant={sortOrder === "ASC" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            setSortOrder("ASC");
+                            setCurrentPage(0);
+                          }}
+                          className="h-9"
+                        >
+                          <ArrowUp className="h-4 w-4 mr-1" />
+                          Ascending
+                        </Button>
+                        <Button
+                          variant={sortOrder === "DESC" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            setSortOrder("DESC");
+                            setCurrentPage(0);
+                          }}
+                          className="h-9"
+                        >
+                          <ArrowDown className="h-4 w-4 mr-1" />
+                          Descending
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="flex h-64 items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : allCertificates.length === 0 ? (
+                  <div className="flex h-64 flex-col items-center justify-center text-center">
+                    <Globe className="h-12 w-12 text-muted-foreground/50" />
+                    <h3 className="mt-4 text-lg font-semibold">No certificates found</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {searchQuery || portFilter !== "all" || expiryFilter !== "all"
+                        ? "Try adjusting your search or filters"
+                        : "Run a network scan to discover certificates"}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Host</TableHead>
+                          <TableHead>Ports</TableHead>
+                          <TableHead>Issuer</TableHead>
+                          <TableHead>Algorithm</TableHead>
+                          <TableHead>Valid From</TableHead>
+                          <TableHead>Valid To</TableHead>
+                          <TableHead>Days Left</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {allCertificates.map((cert) => {
+                          const daysLeft = cert.notAfter ? calculateDaysToExpiry(cert.notAfter) : 0;
+                          const status = cert.error ? "error" : daysLeft < 0 ? "expired" : daysLeft <= 30 ? "expiring" : "valid";
+                          return (
+                            <TableRow key={cert.id}>
+                              <TableCell className="font-medium">{cert.host}</TableCell>
+                              <TableCell>{cert.portsCsv || "-"}</TableCell>
+                              <TableCell className="max-w-[150px] truncate">{cert.issuerCA || "-"}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{cert.algorithm || "Unknown"}</Badge>
+                              </TableCell>
+                              <TableCell>{cert.notBefore ? new Date(cert.notBefore).toLocaleDateString() : "-"}</TableCell>
+                              <TableCell>{cert.notAfter ? new Date(cert.notAfter).toLocaleDateString() : "-"}</TableCell>
+                              <TableCell>
+                                <span className={
+                                  daysLeft < 0 
+                                    ? "text-red-600 dark:text-red-400" 
+                                    : daysLeft <= 30 
+                                    ? "text-yellow-600 dark:text-yellow-400" 
+                                    : "text-green-600 dark:text-green-400"
+                                }>
+                                  {cert.error ? "Error" : daysLeft < 0 ? `${Math.abs(daysLeft)} days ago` : `${daysLeft} days`}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                {status === "valid" && (
+                                  <Badge className="bg-green-500/10 text-green-500">Valid</Badge>
+                                )}
+                                {status === "expiring" && (
+                                  <Badge className="bg-yellow-500/10 text-yellow-500">Expiring</Badge>
+                                )}
+                                {status === "expired" && (
+                                  <Badge variant="destructive">Expired</Badge>
+                                )}
+                                {status === "error" && (
+                                  <Badge variant="destructive">Error</Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                    <DataTablePagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      pageSize={pageSize}
+                      totalElements={totalElements}
+                      onPageChange={setCurrentPage}
+                      onPageSizeChange={setPageSize}
+                    />
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Network Scan Tab */}
+          <TabsContent value="scan" className="space-y-4">
+            {/* Scan Input */}
+            <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Radar className="h-5 w-5 text-primary" />
@@ -198,7 +528,7 @@ export default function NetworkScan() {
             <div className="flex gap-4">
               <div className="flex-1">
                 <Input
-                  placeholder="Enter network range (e.g., 192.168.1.0/24) or IP address"
+                  placeholder="Enter host (e.g., example.com) or host:port (e.g., example.com:443)"
                   value={networkRange}
                   onChange={(e) => setNetworkRange(e.target.value)}
                   className="w-full"
@@ -421,6 +751,8 @@ export default function NetworkScan() {
             </CardContent>
           </Card>
         )}
+          </TabsContent>
+        </Tabs>
 
         {/* Dialogs */}
         <CertificateDetailsDialog

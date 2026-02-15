@@ -70,4 +70,20 @@ export const bulkApi = {
       method: 'POST',
       body: JSON.stringify(request),
     }),
+
+  // ==================== JOB STATUS & RESULTS ====================
+
+  /**
+   * GET /api/bulk/status/{jobId}
+   * Get status of async bulk operation
+   */
+  getJobStatus: (jobId: string) =>
+    apiRequest<{ jobId: string; status: string; progress: number }>(`/api/bulk/status/${jobId}`),
+
+  /**
+   * GET /api/bulk/results/{jobId}
+   * Get results of completed bulk operation
+   */
+  getJobResults: (jobId: string) =>
+    apiRequest<BulkOperationResult>(`/api/bulk/results/${jobId}`),
 };

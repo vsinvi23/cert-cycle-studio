@@ -16,10 +16,11 @@ import type { AcmeWebhook, AcmeMetrics, AcmeDashboardSummary } from "@/lib/api/t
 export default function AcmeMonitoring() {
   const [webhooks, setWebhooks] = useState<AcmeWebhook[]>([]);
   const [metrics, setMetrics] = useState<AcmeMetrics | null>(null);
-  const [dashboard, setDashboard] = useState<AcmeDashboardSummary | null>(null);
+  const [dashboard, setDashboard] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
   // Form state for new webhook
   const [formData, setFormData] = useState({
@@ -42,7 +43,14 @@ export default function AcmeMonitoring() {
         acmeMonitoringApi.getDashboard(),
       ]);
       setWebhooks(webhooksData || []);
-      setMetrics(metricsData);
+      
+      // Handle metrics response - API returns array, we want first item
+      if (Array.isArray(metricsData) && metricsData.length > 0) {
+        setMetrics(metricsData[0]);
+      } else {
+        setMetrics(null);
+      }
+      
       setDashboard(dashboardData);
     } catch (error) {
       console.error("Failed to fetch ACME monitoring data:", error);
@@ -143,23 +151,23 @@ export default function AcmeMonitoring() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Orders</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Orders (Month)</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
                 <Activity className="h-5 w-5 text-primary" />
-                <span className="text-2xl font-bold">{dashboard?.totalOrders || 0}</span>
+                <span className="text-2xl font-bold">{dashboard?.current_month?.total_orders_created || 0}</span>
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Success Rate</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Health Score</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-green-500" />
-                <span className="text-2xl font-bold">{((dashboard?.successRate || 0) * 100).toFixed(1)}%</span>
+                <span className="text-2xl font-bold">{(dashboard?.health_score || 0).toFixed(1)}%</span>
               </div>
             </CardContent>
           </Card>
@@ -170,18 +178,18 @@ export default function AcmeMonitoring() {
             <CardContent>
               <div className="flex items-center gap-2">
                 <Webhook className="h-5 w-5 text-blue-500" />
-                <span className="text-2xl font-bold">{webhooks.filter((w) => w.isActive).length}</span>
+                <span className="text-2xl font-bold">{webhooks.filter((w) => w.active).length}</span>
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Pending Challenges</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Low Performance</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
                 <XCircle className="h-5 w-5 text-yellow-500" />
-                <span className="text-2xl font-bold">{dashboard?.pendingChallenges || 0}</span>
+                <span className="text-2xl font-bold">{dashboard?.low_performance_count || 0}</span>
               </div>
             </CardContent>
           </Card>
@@ -224,14 +232,39 @@ export default function AcmeMonitoring() {
           </TabsList>
 
           <TabsContent value="webhooks" className="space-y-4">
-            <div className="relative max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search webhooks..."
-                className="pl-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+            <div className="flex gap-4 items-center">
+              <div className="relative max-w-sm flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search webhooks..."
+                  className="pl-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant={activeFilter === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveFilter('all')}
+                >
+                  All
+                </Button>
+                <Button
+                  variant={activeFilter === 'active' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveFilter('active')}
+                >
+                  Active
+                </Button>
+                <Button
+                  variant={activeFilter === 'inactive' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveFilter('inactive')}
+                >
+                  Inactive
+                </Button>
+              </div>
             </div>
 
             <Card>
@@ -252,20 +285,39 @@ export default function AcmeMonitoring() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {webhooks.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                          No webhooks configured
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      webhooks.map((webhook) => (
+                    {(() => {
+                      // Filter webhooks based on search and status
+                      const filtered = webhooks.filter((webhook) => {
+                        const matchesSearch = !searchQuery || 
+                          webhook.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          webhook.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (typeof webhook.events === 'string' ? webhook.events : webhook.events?.join(','))?.toLowerCase().includes(searchQuery.toLowerCase());
+                        
+                        const matchesStatus = 
+                          activeFilter === 'all' ||
+                          (activeFilter === 'active' && webhook.active) ||
+                          (activeFilter === 'inactive' && !webhook.active);
+                        
+                        return matchesSearch && matchesStatus;
+                      });
+
+                      if (filtered.length === 0) {
+                        return (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                              No webhooks found
+                            </TableCell>
+                          </TableRow>
+                        );
+                      }
+
+                      return filtered.map((webhook) => (
                         <TableRow key={webhook.id}>
-                          <TableCell className="font-medium">{webhook.name}</TableCell>
+                          <TableCell className="font-medium">{webhook.name || 'Unnamed Webhook'}</TableCell>
                           <TableCell className="max-w-xs truncate font-mono text-sm">{webhook.url}</TableCell>
                           <TableCell>
-                            <Badge className={webhook.isActive ? "bg-green-500/10 text-green-500" : "bg-gray-500/10 text-gray-500"}>
-                              {webhook.isActive ? "Active" : "Inactive"}
+                            <Badge className={webhook.active ? "bg-green-500/10 text-green-500" : "bg-gray-500/10 text-gray-500"}>
+                              {webhook.active ? "Active" : "Inactive"}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -276,8 +328,8 @@ export default function AcmeMonitoring() {
                             )}
                           </TableCell>
                           <TableCell>
-                            {webhook.lastTriggered
-                              ? new Date(webhook.lastTriggered).toLocaleString()
+                            {webhook.lastSuccessAt
+                              ? new Date(webhook.lastSuccessAt).toLocaleString()
                               : "Never"}
                           </TableCell>
                           <TableCell>
@@ -290,8 +342,8 @@ export default function AcmeMonitoring() {
                             </Button>
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
+                      ));
+                    })()}
                   </TableBody>
                 </Table>
               </CardContent>

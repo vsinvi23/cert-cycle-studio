@@ -8,14 +8,26 @@ import type {
   GeneralAlertRequest,
   WebhookRegistration
 } from "./types";
+import type { PaginatedResponse, PaginationParams } from "./types/pagination";
+import { buildQueryParams } from "./types/pagination";
 
 export const alertsApi = {
   /**
    * GET /api/alerts/configurations
-   * Get all alert configurations
+   * Get all alert configurations with pagination
    */
-  getConfigurations: () =>
-    apiRequest<AlertConfiguration[]>("/api/alerts/configurations"),
+  getConfigurations: (params: PaginationParams = {}) => {
+    const queryString = buildQueryParams({
+      page: params.page,
+      size: params.size,
+      search: params.search,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+    });
+    return apiRequest<PaginatedResponse<AlertConfiguration> | AlertConfiguration[]>(
+      `/api/alerts/configurations${queryString}`
+    );
+  },
 
   /**
    * POST /api/alerts/configure
@@ -29,14 +41,21 @@ export const alertsApi = {
 
   /**
    * GET /api/alerts/history
-   * Get alert history
+   * Get alert history with pagination and date filtering
    */
-  getHistory: (startDate?: string, endDate?: string) => {
-    const params = new URLSearchParams();
-    if (startDate) params.append("startDate", startDate);
-    if (endDate) params.append("endDate", endDate);
-    const query = params.toString();
-    return apiRequest<AlertHistory[]>(`/api/alerts/history${query ? `?${query}` : ""}`);
+  getHistory: (params: PaginationParams & { startDate?: string; endDate?: string } = {}) => {
+    const queryString = buildQueryParams({
+      page: params.page,
+      size: params.size,
+      search: params.search,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+      startDate: params.startDate,
+      endDate: params.endDate,
+    });
+    return apiRequest<PaginatedResponse<AlertHistory> | AlertHistory[]>(
+      `/api/alerts/history${queryString}`
+    );
   },
 
   /**

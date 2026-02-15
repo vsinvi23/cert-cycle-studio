@@ -31,17 +31,26 @@ export const reportsApi = {
 
   /**
    * GET /api/audit-logs
-   * Get audit logs
+   * Get audit logs with pagination
+   * @param page - Page number (0-indexed)
+   * @param size - Page size
+   * @param sort - Sort criteria (e.g., "timestamp,desc")
    * @param startDate - Start date (ISO 8601 format)
    * @param endDate - End date (ISO 8601 format)
-   * @param action - Filter by action type
    */
-  getAuditLogs: async (startDate?: string, endDate?: string, action?: string): Promise<AuditLog[]> => {
+  getAuditLogs: async (
+    page: number = 0,
+    size: number = 20,
+    sort: string = "timestamp,desc",
+    startDate?: string,
+    endDate?: string
+  ): Promise<import("./types").PaginatedResponse<AuditLog>> => {
     const params = new URLSearchParams();
+    params.append("page", page.toString());
+    params.append("size", size.toString());
+    params.append("sort", sort);
     if (startDate) params.append("startDate", startDate);
     if (endDate) params.append("endDate", endDate);
-    if (action) params.append("action", action);
-    const query = params.toString();
-    return apiRequest<AuditLog[]>(`/api/audit-logs${query ? `?${query}` : ""}`);
+    return apiRequest<import("./types").PaginatedResponse<AuditLog>>(`/api/audit-logs?${params.toString()}`);
   },
 };

@@ -1,8 +1,17 @@
 import { useEffect, useState } from "react";
-import { Search, Trash2, Ban, Loader2 } from "lucide-react";
+import { Search, Trash2, Ban, Loader2, ArrowUp, ArrowDown } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { SearchBar } from "@/components/ui/search-bar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -27,19 +36,41 @@ export default function ViewCA() {
   const [cas, setCas] = useState<CertificateAuthority[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("ASC");
 
   const fetchCAs = async () => {
     setIsLoading(true);
     try {
-      const response = await caApi.list();
+      const response = await caApi.list({
+        page: currentPage,
+        size: pageSize,
+        alias: searchQuery || undefined,
+        sortBy,
+        sortOrder,
+      });
       let caList: CertificateAuthority[] = [];
       if (Array.isArray(response)) {
         caList = response;
+        setTotalElements(response.length);
+        setTotalPages(1);
       } else if (response && typeof response === 'object') {
         if ('results' in (response as Record<string, unknown>)) {
+          // Handle custom pagination format: { results, total, page, size }
           caList = (response as { results: CertificateAuthority[] }).results;
+          const total = (response as any).total || 0;
+          const size = (response as any).size || pageSize;
+          setTotalElements(total);
+          setTotalPages(Math.ceil(total / size));
         } else if ('content' in (response as Record<string, unknown>)) {
+          // Handle Spring Boot PageImpl format
           caList = (response as { content: CertificateAuthority[] }).content;
+          setTotalPages((response as any).totalPages || 0);
+          setTotalElements((response as any).totalElements || 0);
         }
       }
       // Parse distinguishedName to extract fields
@@ -77,7 +108,7 @@ export default function ViewCA() {
 
   useEffect(() => {
     fetchCAs();
-  }, []);
+  }, [currentPage, pageSize, searchQuery, sortBy, sortOrder]);
 
   const handleDelete = async (alias: string, commonName: string) => {
     try {
@@ -120,12 +151,8 @@ export default function ViewCA() {
     }
   };
 
-  const filteredCAs = cas.filter(
-    (ca) =>
-      ca.commonName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ca.alias?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ca.organization?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Server-side search is now handled by the API
+  const filteredCAs = cas;
 
   const getStatusBadge = (ca: CertificateAuthority) => {
     // Check revoked field first (from API response)
@@ -168,22 +195,80 @@ export default function ViewCA() {
           <CreateCADialog onSuccess={fetchCAs} />
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input 
-              placeholder="Search CAs..." 
-              className="pl-9"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
-
         <Card>
           <CardHeader>
-            <CardTitle>Certificate Authorities</CardTitle>
-            <CardDescription>View and manage your CAs</CardDescription>
+            <div className="flex flex-col gap-4">
+              <div>
+                <CardTitle>Certificate Authorities ({totalElements} total)</CardTitle>
+                <CardDescription>View and manage your CAs</CardDescription>
+              </div>
+              
+              {/* Search Bar */}
+              <SearchBar
+                value={searchQuery}
+                onChange={(value) => {
+                  setSearchQuery(value);
+                  setCurrentPage(0);
+                }}
+                placeholder="Search CAs by alias, common name, or organization..."
+              />
+
+              {/* Sorting Controls */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 border-t pt-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground">Sort by:</span>
+                  <Select
+                    value={sortBy}
+                    onValueChange={(value) => {
+                      setSortBy(value);
+                      setCurrentPage(0);
+                    }}
+                  >
+                    <SelectTrigger className="w-[180px] h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="alias">Alias</SelectItem>
+                      <SelectItem value="commonName">Common Name</SelectItem>
+                      <SelectItem value="organization">Organization</SelectItem>
+                      <SelectItem value="issuedAt">Issued Date</SelectItem>
+                      <SelectItem value="expiresAt">Expiry Date</SelectItem>
+                      <SelectItem value="keyAlgorithm">Algorithm</SelectItem>
+                      <SelectItem value="createdAt">Created Date</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground">Order:</span>
+                  <div className="flex gap-1">
+                    <Button
+                      variant={sortOrder === "ASC" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setSortOrder("ASC");
+                        setCurrentPage(0);
+                      }}
+                      className="h-9"
+                    >
+                      <ArrowUp className="h-4 w-4 mr-1" />
+                      Ascending
+                    </Button>
+                    <Button
+                      variant={sortOrder === "DESC" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setSortOrder("DESC");
+                        setCurrentPage(0);
+                      }}
+                      className="h-9"
+                    >
+                      <ArrowDown className="h-4 w-4 mr-1" />
+                      Descending
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {filteredCAs.length === 0 ? (
@@ -206,8 +291,8 @@ export default function ViewCA() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredCAs.map((ca) => (
-                      <TableRow key={ca.id}>
+                    {filteredCAs.map((ca, index) => (
+                      <TableRow key={ca.id || ca.alias || index}>
                         <TableCell className="font-medium">{ca.commonName}</TableCell>
                         <TableCell>{ca.organization || "-"}</TableCell>
                         <TableCell>{ca.signatureAlgorithm}</TableCell>
@@ -252,6 +337,19 @@ export default function ViewCA() {
                   </TableBody>
                 </Table>
               </div>
+            )}
+            {totalPages > 0 && (
+              <DataTablePagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                totalElements={totalElements}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  setCurrentPage(0);
+                }}
+              />
             )}
           </CardContent>
         </Card>

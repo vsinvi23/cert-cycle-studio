@@ -1,184 +1,233 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { ArrowLeft } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
-} from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Shield, Save, ArrowLeft } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-
-const permissions = [
-  { id: "ca_create", label: "Create CA" },
-  { id: "ca_view", label: "View CA" },
-  { id: "ca_delete", label: "Delete CA" },
-  { id: "ca_revoke", label: "Revoke CA" },
-  { id: "cert_issue", label: "Issue Certificate" },
-  { id: "cert_view", label: "View Certificate" },
-  { id: "cert_revoke", label: "Revoke Certificate" },
-  { id: "cert_delete", label: "Delete Certificate" },
-  { id: "user_create", label: "Create User" },
-  { id: "user_manage", label: "Manage User" },
-  { id: "role_create", label: "Create Role" },
-  { id: "role_manage", label: "Manage Role" },
-];
-
-const createRoleSchema = z.object({
-  roleName: z.string().min(2, "Role name must be at least 2 characters").max(50),
-  description: z.string().max(200).optional(),
-  permissions: z.array(z.string()).min(1, "Select at least one permission"),
-});
-
-type CreateRoleFormValues = z.infer<typeof createRoleSchema>;
+import { rolesApi } from "@/lib/api";
+import type { AvailablePermissions } from "@/lib/api/types";
 
 export default function CreateRole() {
   const navigate = useNavigate();
-
-  const form = useForm<CreateRoleFormValues>({
-    resolver: zodResolver(createRoleSchema),
-    defaultValues: {
-      roleName: "",
-      description: "",
-      permissions: [],
-    },
+  const [loading, setLoading] = useState(false);
+  const [availablePermissions, setAvailablePermissions] = useState<AvailablePermissions | null>(null);
+  const [formData, setFormData] = useState({
+    name: "ROLE_",
+    description: "",
+    permissions: [] as string[],
   });
 
-  const onSubmit = (data: CreateRoleFormValues) => {
-    // TODO: Integrate with REST API
-    console.log("Create Role:", data);
-    toast({
-      title: "Role Created",
-      description: `Role "${data.roleName}" created successfully.`,
-    });
-    navigate("/user-management/manage-role");
+  useEffect(() => {
+    fetchPermissions();
+  }, []);
+
+  const fetchPermissions = async () => {
+    try {
+      // Fetch permissions from API
+      const permissions = await rolesApi.getAllPermissions();
+      const data = {
+        permissions: permissions,
+        totalCount: permissions.length,
+      };
+      setAvailablePermissions(data);
+    } catch (error) {
+      console.error("Failed to fetch permissions:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load available permissions",
+        variant: "destructive",
+      });
+    }
   };
+
+  const handlePermissionToggle = (permission: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      permissions: prev.permissions.includes(permission)
+        ? prev.permissions.filter((p) => p !== permission)
+        : [...prev.permissions, permission],
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.name.startsWith("ROLE_")) {
+      toast({
+        title: "Invalid Role Name",
+        description: "Role name must start with 'ROLE_'",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.permissions.length === 0) {
+      toast({
+        title: "No Permissions Selected",
+        description: "Please select at least one permission",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await rolesApi.createRole({
+        name: formData.name,
+        description: formData.description,
+        permissions: formData.permissions,
+      });
+
+      toast({
+        title: "Role Created",
+        description: `Role "${formData.name}" has been created successfully`,
+      });
+
+      navigate("/manage-role");
+    } catch (error: any) {
+      console.error("Failed to create role:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to create role",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const permissionCategories = availablePermissions?.categorized || {};
 
   return (
     <AppLayout>
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/manage-role")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Create Role</h1>
-            <p className="text-muted-foreground">Define a new role with permissions</p>
+            <h1 className="text-2xl font-bold">Create New Role</h1>
+            <p className="text-muted-foreground">Define a new role with custom permissions</p>
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Role Details</CardTitle>
-            <CardDescription>Enter the details for the new role</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid grid-cols-1 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="roleName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Role Name *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Certificate Manager" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  Role Details
+                </CardTitle>
+                <CardDescription>Basic information about the role</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Role Name *</Label>
+                  <Input
+                    id="name"
+                    placeholder="ROLE_CERTIFICATE_MANAGER"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
                   />
+                  <p className="text-sm text-muted-foreground">
+                    Role name must start with "ROLE_" prefix
+                  </p>
+                </div>
 
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Describe the role and its responsibilities..."
-                            className="resize-none"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="Describe the role's purpose and responsibilities"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    rows={3}
                   />
+                </div>
+              </CardContent>
+            </Card>
 
-                  <FormField
-                    control={form.control}
-                    name="permissions"
-                    render={() => (
-                      <FormItem>
-                        <div className="mb-4">
-                          <FormLabel className="text-base">Permissions *</FormLabel>
-                          <FormDescription>
-                            Select the permissions for this role
-                          </FormDescription>
+            <Card>
+              <CardHeader>
+                <CardTitle>Permissions</CardTitle>
+                <CardDescription>
+                  Select permissions for this role ({formData.permissions.length} selected)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!availablePermissions ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {Object.entries(permissionCategories).map(([category, permissions]) => (
+                      <div key={category} className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="font-semibold">
+                            {category}
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">
+                            {permissions.length} permissions
+                          </span>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pl-4">
                           {permissions.map((permission) => (
-                            <FormField
-                              key={permission.id}
-                              control={form.control}
-                              name="permissions"
-                              render={({ field }) => (
-                                <FormItem
-                                  key={permission.id}
-                                  className="flex flex-row items-start space-x-3 space-y-0"
-                                >
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value?.includes(permission.id)}
-                                      onCheckedChange={(checked) => {
-                                        return checked
-                                          ? field.onChange([...field.value, permission.id])
-                                          : field.onChange(
-                                              field.value?.filter(
-                                                (value) => value !== permission.id
-                                              )
-                                            );
-                                      }}
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="font-normal cursor-pointer">
-                                    {permission.label}
-                                  </FormLabel>
-                                </FormItem>
-                              )}
-                            />
+                            <div key={permission} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={permission}
+                                checked={formData.permissions.includes(permission)}
+                                onCheckedChange={() => handlePermissionToggle(permission)}
+                              />
+                              <Label
+                                htmlFor={permission}
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                {permission}
+                              </Label>
+                            </div>
                           ))}
                         </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-                <div className="flex justify-end gap-3 pt-4">
-                  <Button type="button" variant="outline" onClick={() => navigate(-1)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit">Create Role</Button>
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+            <div className="flex justify-end gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate("/manage-role")}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Create Role
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </form>
       </div>
     </AppLayout>
   );

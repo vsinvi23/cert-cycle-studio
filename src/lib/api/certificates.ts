@@ -1,4 +1,5 @@
 import { apiRequest } from "./config";
+import apiClient from "../apiClient";
 import type { 
   Certificate, 
   NmapCertificateScan, 
@@ -7,82 +8,130 @@ import type {
   AutoRenewConfiguration,
   CertificateTemplate,
   AddCertificateRequest,
+  CertificateResponse,
   IssueCertificateRequest,
   RevokeReason,
   EnableAutoRenewRequest,
   CreateCertificateTemplateRequest,
   BulkOperationResult
 } from "./types";
+import type { PaginatedResponse, CertificateFilters } from "./types/pagination";
+import { buildQueryParams } from "./types/pagination";
 
 export const certificatesApi = {
   /**
-   * GET /api/certificates/all
-   * List all certificates
+   * POST /api/certificates/add
+   * Manually add/import an existing certificate (Form Data)
    */
-  getAll: async (): Promise<Certificate[]> => {
-    return apiRequest<Certificate[]>("/api/certificates/all");
+  add: async (request: AddCertificateRequest): Promise<CertificateResponse> => {
+    const formData = new FormData();
+    formData.append('userId', request.userId.toString());
+    formData.append('certificateName', request.certificateName);
+    formData.append('certData', request.certData);
+    
+    const response = await apiClient.post<CertificateResponse>("/api/certificates/add", formData, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+    return response.data;
   },
 
   /**
    * GET /api/certificates/user/{userId}
    * Get certificates by user ID
    */
-  getByUser: async (userId: number): Promise<Certificate[]> => {
-    return apiRequest<Certificate[]>(`/api/certificates/user/${userId}`);
+  getByUser: async (userId: number): Promise<CertificateResponse[]> => {
+    const response = await apiClient.get<CertificateResponse[]>(`/api/certificates/user/${userId}`);
+    return response.data;
   },
 
   /**
-   * POST /api/certificates/add
-   * Add certificate manually
+   * GET /api/certificates/all
+   * List all manually added/imported certificates with pagination, search, and filters
+   * Supports: pagination, sorting, searching (name/CN/subject), filtering (user, expiry status)
    */
-  add: async (request: AddCertificateRequest): Promise<Certificate> => {
-    return apiRequest<Certificate>("/api/certificates/add", {
-      method: "POST",
-      body: JSON.stringify(request),
-    });
+  getAll: async (params: CertificateFilters = {}): Promise<PaginatedResponse<CertificateResponse> | CertificateResponse[]> => {
+    try {
+      // Build query string with all parameters
+      const queryString = buildQueryParams({
+        page: params.page,
+        size: params.size,
+        search: params.search,
+        expiryStatus: params.expiryStatus,
+        userId: params.userId,
+        sortBy: params.sortBy,
+        sortOrder: params.sortOrder,
+      });
+      
+      console.log('[API] Calling /api/certificates/all with query:', queryString);
+      
+      const response = await apiClient.get<PaginatedResponse<CertificateResponse>>(`/api/certificates/all${queryString}`);
+      console.log('[API] Response received:', response.data);
+      return response.data;
+    } catch (error: any) {
+      // If pagination fails (backend doesn't support it yet), try without parameters
+      if (params && Object.keys(params).length > 0 && (error.response?.status === 400 || error.response?.status === 404)) {
+        console.warn("[API] Pagination not supported, falling back to simple GET");
+        const response = await apiClient.get<CertificateResponse[]>('/api/certificates/all');
+        return response.data;
+      }
+      throw error;
+    }
   },
 
   /**
    * POST /api/certificates/issue
-   * Issue new certificate with specified parameters
+   * Issue new certificate for a host/domain
    */
-  issue: async (request: IssueCertificateRequest): Promise<Certificate> => {
-    return apiRequest<Certificate>("/api/certificates/issue", {
-      method: "POST",
-      body: JSON.stringify(request),
-    });
+  issue: async (request: IssueCertificateRequest): Promise<NmapCertificateScan> => {
+    const params = new URLSearchParams();
+    params.append('host', request.host);
+    params.append('commonName', request.commonName);
+    params.append('caAlias', request.caAlias);
+    
+    if (request.port) params.append('port', request.port.toString());
+    if (request.organization) params.append('organization', request.organization);
+    if (request.organizationalUnit) params.append('organizationalUnit', request.organizationalUnit);
+    if (request.locality) params.append('locality', request.locality);
+    if (request.state) params.append('state', request.state);
+    if (request.country) params.append('country', request.country);
+    if (request.validityDays) params.append('validityDays', request.validityDays.toString());
+    if (request.keySize) params.append('keySize', request.keySize.toString());
+    
+    const response = await apiClient.post<NmapCertificateScan>(
+      `/api/certificates/issue?${params.toString()}`
+    );
+    return response.data;
   },
 
   /**
    * POST /api/certificate/create
-   * Issue user certificate with full details
+   * Create user certificate with full details (signed by CA)
    */
-  issueUserCertificate: async (request: CreateUserCertificateRequest): Promise<string> => {
-    return apiRequest<string>("/api/certificate/create", {
-      method: "POST",
-      body: JSON.stringify(request),
-    });
+  createUserCertificate: async (request: CreateUserCertificateRequest): Promise<string> => {
+    const response = await apiClient.post<string>("/api/certificate/create", request);
+    return response.data;
   },
 
   /**
    * POST /api/certificates/renew/{certId}
    * Renew an existing certificate
    */
-  renew: async (certId: number): Promise<Certificate> => {
-    return apiRequest<Certificate>(`/api/certificates/renew/${certId}`, {
-      method: "POST",
-    });
+  renew: async (certId: number): Promise<NmapCertificateScan> => {
+    const response = await apiClient.post<NmapCertificateScan>(`/api/certificates/renew/${certId}`);
+    return response.data;
   },
 
   /**
    * POST /api/certificates/revoke/{certId}
-   * Revoke a certificate
+   * Revoke a certificate with reason
    */
-  revoke: async (certId: number, reason: RevokeReason): Promise<void> => {
-    return apiRequest<void>(`/api/certificates/revoke/${certId}`, {
-      method: "POST",
-      body: JSON.stringify({ reason }),
-    });
+  revoke: async (certId: number, reason: string): Promise<void> => {
+    const response = await apiClient.post<void>(
+      `/api/certificates/revoke/${certId}?reason=${encodeURIComponent(reason)}`
+    );
+    return response.data;
   },
 
   /**

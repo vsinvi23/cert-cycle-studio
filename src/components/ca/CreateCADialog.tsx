@@ -37,7 +37,7 @@ const signatureAlgorithms = [
   { value: "RSA4096", label: "RSA 4096" },
   { value: "ECDSA_P256", label: "ECDSA P256" },
   { value: "ECDSA_P384", label: "ECDSA P384" },
-];
+] as const;
 
 const createCASchema = z.object({
   commonName: z.string().min(1, "Common name is required").max(100),
@@ -46,7 +46,7 @@ const createCASchema = z.object({
   locality: z.string().max(100).optional(),
   state: z.string().max(100).optional(),
   country: z.string().min(2, "Country code is required").max(2, "Country must be 2 characters"),
-  signatureAlgorithm: z.string().min(1, "Signature algorithm is required"),
+  signatureAlgorithm: z.enum(["RSA2048", "RSA3072", "RSA4096", "ECDSA_P256", "ECDSA_P384"]),
   validityInDays: z.coerce.number().min(1, "Must be at least 1 day").max(36500, "Maximum 100 years"),
   alias: z.string().min(1, "Alias is required").max(50).regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers, and hyphens"),
 });
@@ -81,7 +81,7 @@ export function CreateCADialog({ onSuccess }: CreateCADialogProps) {
     try {
       await caApi.create({
         alias: data.alias,
-        cn: data.commonName,
+        commonName: data.commonName,
         organization: data.organization,
         organizationalUnit: data.organizationalUnit,
         locality: data.locality,

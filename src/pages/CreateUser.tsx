@@ -1,9 +1,12 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { usersApi, rolesApi } from "@/lib/api";
+import type { Role } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -24,20 +27,26 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 
-const roles = [
-  { value: "admin", label: "Admin" },
-  { value: "user", label: "User" },
-  { value: "viewer", label: "Viewer" },
+const departments = [
+  "Engineering",
+  "IT",
+  "HR",
+  "Finance",
+  "Marketing",
+  "Operations",
+  "Sales",
 ];
 
 const createUserSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters").max(50),
-  email: z.string().email("Invalid email address"),
-  firstName: z.string().min(1, "First name is required").max(50),
-  lastName: z.string().min(1, "Last name is required").max(50),
+  username: z.string().min(3, "Username must be at least 3 characters").max(100),
+  email: z.string().email("Invalid email address").optional().or(z.literal("")),
+  firstName: z.string().min(1, "First name is required").max(100),
+  lastName: z.string().min(1, "Last name is required").max(100),
   password: z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string(),
   role: z.string().min(1, "Role is required"),
+  department: z.string().optional(),
+  phoneNumber: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -47,6 +56,31 @@ type CreateUserFormValues = z.infer<typeof createUserSchema>;
 
 export default function CreateUser() {
   const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [roles, setRoles] = useState<Role[]>([]);
+
+  useEffect(() => {
+    fetchRoles();
+  }, []);
+
+  const fetchRoles = async () => {
+    try {
+      const data = await rolesApi.getAllRoles();
+      // Extract content array from paginated response
+      if (data && typeof data === 'object' && 'content' in data) {
+        setRoles(Array.isArray(data.content) ? data.content : []);
+      } else {
+        setRoles(Array.isArray(data) ? data : []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch roles:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load roles",
+        variant: "destructive",
+      });
+    }
+  };
 
   const form = useForm<CreateUserFormValues>({
     resolver: zodResolver(createUserSchema),
@@ -58,17 +92,41 @@ export default function CreateUser() {
       password: "",
       confirmPassword: "",
       role: "",
+      department: "",
+      phoneNumber: "",
     },
   });
 
-  const onSubmit = (data: CreateUserFormValues) => {
-    // TODO: Integrate with REST API
-    console.log("Create User:", data);
-    toast({
-      title: "User Created",
-      description: `User "${data.username}" created successfully.`,
-    });
-    navigate("/user-management/manage");
+  const onSubmit = async (data: CreateUserFormValues) => {
+    setIsSubmitting(true);
+    try {
+      await usersApi.createUser({
+        username: data.username,
+        password: data.password,
+        email: data.email || undefined,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        department: data.department || undefined,
+        phoneNumber: data.phoneNumber || undefined,
+        enabled: true,
+        roleIds: data.role ? [parseInt(data.role)] : [],
+      });
+      
+      toast({
+        title: "User Created",
+        description: `User "${data.username}" created successfully.`,
+      });
+      navigate("/user-management/manage");
+    } catch (error: any) {
+      console.error("Failed to create user:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create user. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -191,8 +249,8 @@ export default function CreateUser() {
                           </FormControl>
                           <SelectContent>
                             {roles.map((role) => (
-                              <SelectItem key={role.value} value={role.value}>
-                                {role.label}
+                              <SelectItem key={role.id} value={role.id.toString()}>
+                                {role.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -201,13 +259,55 @@ export default function CreateUser() {
                       </FormItem>
                     )}
                   />
+
+                  <FormField
+                    control={form.control}
+                    name="department"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Department</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select department (optional)" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {departments.map((dept) => (
+                              <SelectItem key={dept} value={dept}>
+                                {dept}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="phoneNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <FormControl>
+                          <Input placeholder="+1-555-0123 (optional)" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4">
-                  <Button type="button" variant="outline" onClick={() => navigate(-1)}>
+                  <Button type="button" variant="outline" onClick={() => navigate(-1)} disabled={isSubmitting}>
                     Cancel
                   </Button>
-                  <Button type="submit">Create User</Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isSubmitting ? "Creating..." : "Create User"}
+                  </Button>
                 </div>
               </form>
             </Form>

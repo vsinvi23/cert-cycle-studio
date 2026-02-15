@@ -5,6 +5,8 @@ interface User {
   id: string;
   username: string;
   name: string;
+  roles?: string[];
+  permissions?: string[];
 }
 
 interface AuthContextType {
@@ -13,6 +15,8 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, password: string) => Promise<void>;
   logout: () => void;
+  hasPermission: (permission: string) => boolean;
+  hasAnyPermission: (permissions: string[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,6 +80,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [logout]);
 
+  const hasPermission = useCallback((permission: string): boolean => {
+    if (!user || !user.permissions) return false;
+    return user.permissions.includes(permission);
+  }, [user]);
+
+  const hasAnyPermission = useCallback((permissions: string[]): boolean => {
+    if (!user || !user.permissions) return false;
+    return permissions.some(p => user.permissions!.includes(p));
+  }, [user]);
+
   const login = async (username: string, password: string) => {
     try {
       // Call the CertAxis login API
@@ -89,6 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: "1",
         username,
         name: username,
+        roles: response.roles || [],
+        permissions: response.permissions || [],
       };
       
       setUser(loggedInUser);
@@ -113,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, logout, hasPermission, hasAnyPermission }}>
       {children}
     </AuthContext.Provider>
   );

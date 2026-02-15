@@ -33,9 +33,20 @@ export default function BulkOperations() {
     setLoading(true);
     try {
       const data = await certificatesApi.getAll();
-      setCertificates(data || []);
+      // Handle both paginated and non-paginated responses
+      if (data && typeof data === 'object' && 'content' in data) {
+        // Paginated response
+        setCertificates(data.content || []);
+      } else if (Array.isArray(data)) {
+        // Array response
+        setCertificates(data);
+      } else {
+        setCertificates([]);
+      }
     } catch (error) {
       console.error("Failed to fetch certificates:", error);
+      setCertificates([]);
+      toast.error("Failed to load certificates");
     } finally {
       setLoading(false);
     }
