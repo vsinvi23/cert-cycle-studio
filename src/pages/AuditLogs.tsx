@@ -3,41 +3,85 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Search, FileText, Download, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { reportsApi } from "@/lib/api";
 import type { AuditLog } from "@/lib/api/types";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 export default function AuditLogs() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Pagination state
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  
+  // Sorting state
+  const [sortBy, setSortBy] = useState("timestamp");
+  const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("DESC");
+  
+  // Date filtering state
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   useEffect(() => {
     fetchLogs();
-  }, []);
+  }, [page, pageSize, sortBy, sortOrder, startDate, endDate]);
+
+  // Reset to page 0 when search changes
+  useEffect(() => {
+    if (page !== 0) {
+      setPage(0);
+    }
+  }, [searchQuery]);
 
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const data = await reportsApi.getAuditLogs();
-      setLogs(data || []);
+      const sort = `${sortBy},${sortOrder.toLowerCase()}`;
+      const data = await reportsApi.getAuditLogs(page, pageSize, sort, startDate || undefined, endDate || undefined);
+      
+      if (data && typeof data === 'object' && 'content' in data) {
+        setLogs(Array.isArray(data.content) ? data.content : []);
+        setTotalPages(data.totalPages || 0);
+        setTotalElements(data.totalElements || 0);
+      } else {
+        setLogs([]);
+        setTotalPages(0);
+        setTotalElements(0);
+      }
     } catch (error) {
       console.error("Failed to fetch audit logs:", error);
       toast.error("Failed to load audit logs");
+      setLogs([]);
+      setTotalPages(0);
+      setTotalElements(0);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredLogs = logs.filter(
+  // Client-side filtering for search (applies to current page)
+  const filteredLogs = Array.isArray(logs) ? logs.filter(
     (log) =>
+      !searchQuery ||
       log.action?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.performedBy?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.entityType?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      log.entityType?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  ) : [];
+
+  // Calculate pagination for filtered results
+  const displayTotalElements = searchQuery ? filteredLogs.length : totalElements;
+  const displayTotalPages = searchQuery ? Math.ceil(filteredLogs.length / pageSize) : totalPages;
 
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
@@ -94,7 +138,7 @@ export default function AuditLogs() {
             <CardContent>
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-primary" />
-                <span className="text-2xl font-bold">{logs.length}</span>
+                <span className="text-2xl font-bold">{displayTotalElements}</span>
               </div>
             </CardContent>
           </Card>
@@ -106,7 +150,7 @@ export default function AuditLogs() {
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-green-500" />
                 <span className="text-2xl font-bold">
-                  {logs.filter((l) => l.status === "SUCCESS").length}
+                  {filteredLogs.filter((l) => l.status === "SUCCESS").length}
                 </span>
               </div>
             </CardContent>
@@ -119,7 +163,7 @@ export default function AuditLogs() {
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-red-500" />
                 <span className="text-2xl font-bold">
-                  {logs.filter((l) => l.status === "FAILED").length}
+                  {filteredLogs.filter((l) => l.status === "FAILED").length}
                 </span>
               </div>
             </CardContent>
@@ -132,7 +176,7 @@ export default function AuditLogs() {
               <div className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-blue-500" />
                 <span className="text-2xl font-bold">
-                  {logs.filter((l) => {
+                  {filteredLogs.filter((l) => {
                     const today = new Date();
                     const logDate = new Date(l.timestamp);
                     return logDate.toDateString() === today.toDateString();
@@ -143,24 +187,66 @@ export default function AuditLogs() {
           </Card>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by action, user, or entity..."
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-
         {/* Logs Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Activity Log</CardTitle>
-            <CardDescription>All system activities and changes</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Activity Log</CardTitle>
+                <CardDescription>All system activities and changes</CardDescription>
+              </div>
+              <div className="flex items-center gap-4">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search logs..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8 w-[200px] h-9"
+                  />
+                </div>
+
+                {/* Sorting Controls */}
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm whitespace-nowrap">Sort by:</Label>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="w-[180px] h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="timestamp">Timestamp</SelectItem>
+                      <SelectItem value="action">Action</SelectItem>
+                      <SelectItem value="performedBy">User</SelectItem>
+                      <SelectItem value="entityType">Entity Type</SelectItem>
+                      <SelectItem value="ipAddress">IP Address</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm whitespace-nowrap">Order:</Label>
+                  <Button
+                    variant={sortOrder === "ASC" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSortOrder("ASC")}
+                    className="h-9"
+                  >
+                    Ascending
+                  </Button>
+                  <Button
+                    variant={sortOrder === "DESC" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSortOrder("DESC")}
+                    className="h-9"
+                  >
+                    Descending
+                  </Button>
+                </div>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -197,6 +283,19 @@ export default function AuditLogs() {
                 )}
               </TableBody>
             </Table>
+
+            {/* Pagination */}
+            <DataTablePagination
+              currentPage={page}
+              totalPages={displayTotalPages}
+              pageSize={pageSize}
+              totalItems={displayTotalElements}
+              onPageChange={setPage}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setPage(0);
+              }}
+            />
           </CardContent>
         </Card>
       </div>

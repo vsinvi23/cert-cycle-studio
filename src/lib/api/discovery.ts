@@ -1,12 +1,20 @@
 import { apiRequest } from "./config";
+import apiClient from "../apiClient";
 import type { 
   DiscoveryConfiguration, 
   DiscoveryResult, 
   CreateDiscoveryRequest,
   LDAPScanRequest,
+  LDAPScanResponse,
   CloudScanRequest,
-  ScheduleDiscoveryRequest
+  CloudScanResponse,
+  FilesystemScanResponse,
+  ScheduleDiscoveryRequest,
+  ScheduledDiscovery,
+  DiscoveryChange
 } from "./types";
+import type { PaginatedResponse, DiscoveryFilters } from "./types/pagination";
+import { buildQueryParams } from "./types/pagination";
 
 export const discoveryApi = {
   /**
@@ -77,52 +85,62 @@ export const discoveryApi = {
 
   /**
    * POST /api/discovery/scan/ldap
-   * LDAP/AD certificate discovery
+   * Scan LDAP/Active Directory for certificates
    */
-  scanLDAP: async (config: LDAPScanRequest): Promise<string> => {
-    return apiRequest<string>("/api/discovery/scan/ldap", {
-      method: "POST",
-      body: JSON.stringify(config),
-    });
+  scanLDAP: async (config: LDAPScanRequest): Promise<LDAPScanResponse> => {
+    const response = await apiClient.post<LDAPScanResponse>("/api/discovery/scan/ldap", config);
+    return response.data;
   },
 
   /**
    * POST /api/discovery/scan/cloud
-   * Cloud provider scanning (AWS/Azure/GCP)
+   * Scan cloud provider for certificates (AWS/Azure/GCP)
    */
-  scanCloud: async (provider: "aws" | "azure" | "gcp", config: CloudScanRequest): Promise<string> => {
-    return apiRequest<string>(`/api/discovery/scan/cloud?provider=${provider}`, {
-      method: "POST",
-      body: JSON.stringify(config),
-    });
+  scanCloud: async (provider: "aws" | "azure" | "gcp", config: CloudScanRequest): Promise<CloudScanResponse> => {
+    const response = await apiClient.post<CloudScanResponse>(
+      `/api/discovery/scan/cloud?provider=${provider}`, 
+      config
+    );
+    return response.data;
   },
 
   /**
    * POST /api/discovery/scan/filesystem
-   * Filesystem certificate scanning
+   * Scan filesystem directories for certificate files
    */
-  scanFilesystem: async (path: string): Promise<string> => {
-    return apiRequest<string>(`/api/discovery/scan/filesystem?path=${encodeURIComponent(path)}`, {
-      method: "POST",
-    });
+  scanFilesystem: async (path: string): Promise<FilesystemScanResponse> => {
+    const response = await apiClient.post<FilesystemScanResponse>(
+      `/api/discovery/scan/filesystem?path=${encodeURIComponent(path)}`
+    );
+    return response.data;
   },
 
   /**
    * POST /api/discovery/schedule
-   * Schedule recurring discovery
+   * Schedule recurring discovery scans
    */
-  schedule: async (config: ScheduleDiscoveryRequest): Promise<DiscoveryConfiguration> => {
-    return apiRequest<DiscoveryConfiguration>("/api/discovery/schedule", {
-      method: "POST",
-      body: JSON.stringify(config),
-    });
+  schedule: async (config: ScheduleDiscoveryRequest): Promise<ScheduledDiscovery> => {
+    const response = await apiClient.post<ScheduledDiscovery>("/api/discovery/schedule", config);
+    return response.data;
   },
 
   /**
-   * GET /api/discovery/changes
-   * Track discovery changes
+   * GET /api/discovery/changes/paginated
+   * Get tracked changes from certificate discovery scans with pagination and filters
    */
-  getChanges: async (): Promise<string> => {
-    return apiRequest<string>("/api/discovery/changes");
+  getChanges: async (params: DiscoveryFilters = {}): Promise<PaginatedResponse<DiscoveryChange> | DiscoveryChange[]> => {
+    const queryString = buildQueryParams({
+      page: params.page,
+      size: params.size,
+      changeType: params.changeType,
+      host: params.host,
+      startDate: params.startDate,
+      endDate: params.endDate,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+    });
+    
+    const response = await apiClient.get<PaginatedResponse<DiscoveryChange>>(`/api/discovery/changes/paginated${queryString}`);
+    return response.data;
   },
 };

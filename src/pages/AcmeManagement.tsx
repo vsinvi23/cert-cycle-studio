@@ -9,10 +9,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Globe, Plus, Search, CheckCircle, XCircle, RefreshCw, Zap } from "lucide-react";
+import { Loader2, Globe, Plus, Search, CheckCircle, XCircle, RefreshCw, Zap, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
+import { SearchBar } from "@/components/ui/search-bar";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { acmeApi } from "@/lib/api";
 import type { AcmeProvider, AcmeOrder } from "@/lib/api/types";
+import { extractContent } from "@/lib/api/types/pagination";
 
 export default function AcmeManagement() {
   const [providers, setProviders] = useState<AcmeProvider[]>([]);
@@ -20,6 +23,15 @@ export default function AcmeManagement() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  
+  // Pagination state for providers
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [sortBy, setSortBy] = useState("name");
+  const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("ASC");
+  const [enabledFilter, setEnabledFilter] = useState<string>("all");
 
   // Form state for new provider
   const [formData, setFormData] = useState({
@@ -31,19 +43,53 @@ export default function AcmeManagement() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentPage, pageSize, searchQuery, sortBy, sortOrder, enabledFilter]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [providersData, ordersData] = await Promise.all([
-        acmeApi.getProviders(),
-        acmeApi.getOrders(),
-      ]);
-      setProviders(providersData || []);
-      setOrders(ordersData || []);
-    } catch (error) {
-      console.error("Failed to fetch ACME data:", error);
+      // Fetch providers with pagination
+      try {
+        const providersData = await acmeApi.getProviders({
+          page: currentPage,
+          size: pageSize,
+          search: searchQuery || undefined,
+          enabled: enabledFilter !== "all" ? enabledFilter === "active" : undefined,
+          sortBy,
+          sortOrder,
+        });
+        console.log("Providers data:", providersData);
+        
+        // Handle paginated response
+        if (providersData && typeof providersData === 'object' && 'content' in providersData) {
+          const providersList = Array.isArray(providersData.content) ? providersData.content : [];
+          setProviders(providersList);
+          setTotalPages(providersData.totalPages || 0);
+          setTotalElements(providersData.totalElements || 0);
+        } else {
+          const providersList = extractContent(providersData);
+          setProviders(providersList);
+          setTotalElements(providersList.length);
+          setTotalPages(1);
+        }
+      } catch (error) {
+        console.error("Failed to fetch providers:", error);
+        toast.error("Failed to load ACME providers");
+        setProviders([]);
+        setTotalElements(0);
+        setTotalPages(0);
+      }
+
+      // Fetch orders separately so failure doesn't block providers
+      try {
+        const ordersData = await acmeApi.getOrders();
+        console.log("Orders data:", ordersData);
+        setOrders(Array.isArray(ordersData) ? ordersData : []);
+      } catch (error) {
+        console.error("Failed to fetch orders:", error);
+        // Don't show error toast for orders, just log it
+        setOrders([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -176,7 +222,7 @@ export default function AcmeManagement() {
             <CardContent>
               <div className="flex items-center gap-2">
                 <Globe className="h-5 w-5 text-primary" />
-                <span className="text-2xl font-bold">{providers.length}</span>
+                <span className="text-2xl font-bold">{totalElements}</span>
               </div>
             </CardContent>
           </Card>
@@ -189,6 +235,7 @@ export default function AcmeManagement() {
                 <CheckCircle className="h-5 w-5 text-green-500" />
                 <span className="text-2xl font-bold">{providers.filter((p) => p.isActive).length}</span>
               </div>
+              <p className="text-xs text-muted-foreground mt-1">On current page</p>
             </CardContent>
           </Card>
           <Card>
@@ -222,20 +269,90 @@ export default function AcmeManagement() {
           </TabsList>
 
           <TabsContent value="providers" className="space-y-4">
-            <div className="relative max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search providers..."
-                className="pl-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
             <Card>
               <CardHeader>
-                <CardTitle>ACME Providers</CardTitle>
-                <CardDescription>Configured certificate authorities for automated issuance</CardDescription>
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <CardTitle>ACME Providers ({totalElements} total)</CardTitle>
+                    <CardDescription>Configured certificate authorities for automated issuance</CardDescription>
+                  </div>
+                  
+                  {/* Search and Filters Row */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <SearchBar
+                      value={searchQuery}
+                      onChange={(value) => {
+                        setSearchQuery(value);
+                        setCurrentPage(0);
+                      }}
+                      placeholder="Search by name, description, URL..."
+                    />
+                    <Select value={enabledFilter} onValueChange={(value) => { setEnabledFilter(value); setCurrentPage(0); }}>
+                      <SelectTrigger className="w-[150px]">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="active">Active Only</SelectItem>
+                        <SelectItem value="inactive">Inactive Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Sorting Controls */}
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 border-t pt-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-muted-foreground">Sort by:</span>
+                      <Select
+                        value={sortBy}
+                        onValueChange={(value) => {
+                          setSortBy(value);
+                          setCurrentPage(0);
+                        }}
+                      >
+                        <SelectTrigger className="w-[180px] h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="name">Name</SelectItem>
+                          <SelectItem value="type">Type</SelectItem>
+                          <SelectItem value="createdAt">Created Date</SelectItem>
+                          <SelectItem value="updatedAt">Updated Date</SelectItem>
+                          <SelectItem value="rateLimitPerWeek">Rate Limit</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-muted-foreground">Order:</span>
+                      <div className="flex gap-1">
+                        <Button
+                          variant={sortOrder === "ASC" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            setSortOrder("ASC");
+                            setCurrentPage(0);
+                          }}
+                          className="h-9"
+                        >
+                          <ArrowUp className="h-4 w-4 mr-1" />
+                          Ascending
+                        </Button>
+                        <Button
+                          variant={sortOrder === "DESC" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            setSortOrder("DESC");
+                            setCurrentPage(0);
+                          }}
+                          className="h-9"
+                        >
+                          <ArrowDown className="h-4 w-4 mr-1" />
+                          Descending
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -274,6 +391,19 @@ export default function AcmeManagement() {
                     )}
                   </TableBody>
                 </Table>
+                {totalPages > 0 && (
+                  <DataTablePagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    pageSize={pageSize}
+                    totalElements={totalElements}
+                    onPageChange={setCurrentPage}
+                    onPageSizeChange={(size) => {
+                      setPageSize(size);
+                      setCurrentPage(0);
+                    }}
+                  />
+                )}
               </CardContent>
             </Card>
           </TabsContent>

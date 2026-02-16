@@ -42,13 +42,13 @@ export const acmeMonitoringApi = {
 
   // Dashboard & Metrics
   getDashboard: () =>
-    apiRequest<AcmeDashboardSummary>('/api/acme/monitoring/dashboard'),
+    apiRequest<any>('/api/acme/monitoring/dashboard'),
 
   getMetrics: (startDate: string, endDate: string) =>
     apiRequest<AcmeMetrics[]>(`/api/acme/monitoring/metrics?start=${startDate}&end=${endDate}`),
 
   getLatestMetrics: () =>
-    apiRequest<AcmeMetrics>('/api/acme/monitoring/metrics/latest'),
+    apiRequest<AcmeMetrics[]>('/api/acme/monitoring/metrics/latest'),
 
   getMetricsSummary: () =>
     apiRequest<AcmeMetrics>('/api/acme/monitoring/metrics/summary'),

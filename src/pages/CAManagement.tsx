@@ -19,12 +19,41 @@ export default function CAManagement() {
     setIsLoading(true);
     try {
       const response = await caApi.list();
-      // Handle both paginated and array responses
+      let caList: CertificateAuthority[] = [];
+      
+      // Handle paginated response - API returns { results, total, page, size }
       if (Array.isArray(response)) {
-        setCas(response);
-      } else if (response && typeof response === 'object' && 'content' in (response as Record<string, unknown>)) {
-        setCas((response as { content: CertificateAuthority[] }).content);
+        caList = response;
+      } else if (response && typeof response === 'object' && 'results' in (response as Record<string, unknown>)) {
+        caList = (response as { results: CertificateAuthority[] }).results;
+      } else {
+        console.warn("Unexpected CA response format:", response);
+        caList = [];
       }
+      
+      // Parse distinguishedName to extract fields
+      const parsedCAs = caList.map((ca) => {
+        const dnParts = ca.distinguishedName?.split(',').reduce((acc, part) => {
+          const [key, value] = part.trim().split('=');
+          acc[key] = value;
+          return acc;
+        }, {} as Record<string, string>) || {};
+        
+        return {
+          ...ca,
+          commonName: dnParts['CN'] || ca.commonName || ca.alias,
+          organization: dnParts['O'] || ca.organization,
+          organizationalUnit: dnParts['OU'] || ca.organizationalUnit,
+          locality: dnParts['L'] || ca.locality,
+          state: dnParts['ST'] || ca.state,
+          country: dnParts['C'] || ca.country,
+          validFrom: ca.issuedAt || ca.validFrom,
+          validTo: ca.expiresAt || ca.validTo,
+          status: ca.revoked ? "REVOKED" : "ACTIVE",
+        };
+      });
+      
+      setCas(parsedCAs);
     } catch (error) {
       console.error("Failed to fetch CAs:", error);
       toast({
@@ -32,6 +61,7 @@ export default function CAManagement() {
         description: "Failed to load Certificate Authorities",
         variant: "destructive",
       });
+      setCas([]);
     } finally {
       setIsLoading(false);
     }
@@ -107,9 +137,9 @@ export default function CAManagement() {
               </div>
             ) : (
               <div className="space-y-4">
-                {filteredCAs.map((ca) => (
+                {filteredCAs.map((ca, index) => (
                   <div
-                    key={ca.id}
+                    key={ca.id || ca.alias || index}
                     className="flex items-center justify-between rounded-lg border p-4 hover:bg-muted/50 transition-colors cursor-pointer"
                     onClick={() => navigate(`/ca-management/view`)}
                   >
@@ -127,7 +157,7 @@ export default function CAManagement() {
                     <div className="text-right text-sm">
                       <p className="font-mono text-muted-foreground">{ca.alias}</p>
                       <p className="text-xs text-muted-foreground">
-                        Valid until {new Date(ca.validTo).toLocaleDateString()}
+                        {ca.validTo ? `Valid until ${new Date(ca.validTo).toLocaleDateString()}` : 'No expiry date'}
                       </p>
                     </div>
                   </div>

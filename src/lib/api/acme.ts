@@ -11,16 +11,28 @@ import type {
   EnableAcmeRenewalRequest,
   DisableAcmeRenewalRequest
 } from "./types";
+import type { PaginatedResponse, AcmeProviderFilters, AcmeAccountFilters } from "./types/pagination";
+import { buildQueryParams } from "./types/pagination";
 
 export const acmeApi = {
   // ==================== PROVIDER MANAGEMENT ====================
   
   /**
-   * GET /api/acme/providers
-   * List all ACME providers
+   * GET /api/acme/providers/paginated
+   * List all ACME providers with pagination, search, and enabled status filtering
+   * Supports: pagination, sorting, searching (name/description/URL), filtering (enabled)
    */
-  getProviders: async (): Promise<AcmeProvider[]> => {
-    return apiRequest<AcmeProvider[]>("/api/acme/providers");
+  getProviders: async (params: AcmeProviderFilters = {}): Promise<PaginatedResponse<AcmeProvider> | AcmeProvider[]> => {
+    const queryString = buildQueryParams({
+      page: params.page,
+      size: params.size,
+      search: params.search,
+      enabled: params.enabled,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+    });
+    
+    return apiRequest<PaginatedResponse<AcmeProvider>>(`/api/acme/providers/paginated${queryString}`);
   },
 
   /**
@@ -55,11 +67,21 @@ export const acmeApi = {
   // ==================== ACCOUNT MANAGEMENT ====================
 
   /**
-   * GET /api/acme/accounts
-   * List all ACME accounts
+   * GET /api/acme/accounts/paginated
+   * List all ACME accounts with pagination and filters
+   * Supports: pagination, sorting, filtering (provider ID, account status)
    */
-  getAccounts: async (): Promise<AcmeAccount[]> => {
-    return apiRequest<AcmeAccount[]>("/api/acme/accounts");
+  getAccounts: async (params: AcmeAccountFilters = {}): Promise<PaginatedResponse<AcmeAccount> | AcmeAccount[]> => {
+    const queryString = buildQueryParams({
+      page: params.page,
+      size: params.size,
+      providerId: params.providerId,
+      status: params.status,
+      sortBy: params.sortBy,
+      sortDir: params.sortDir,
+    });
+    
+    return apiRequest<PaginatedResponse<AcmeAccount>>(`/api/acme/accounts/paginated${queryString}`);
   },
 
   /**

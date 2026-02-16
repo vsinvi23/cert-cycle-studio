@@ -37,15 +37,47 @@ export default function CertificateTemplates() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      // Fetch CAs for the dropdown
-      const casData = await caApi.list();
-      setCas(casData || []);
       
-      // Templates are created via the API - fetch from local state or API
-      // Note: If there's a GET templates endpoint, use it here
+      // Fetch both CAs and templates in parallel
+      const [casData, templatesData] = await Promise.all([
+        caApi.list(),
+        certificatesApi.getAllTemplates()
+      ]);
+      
+      // Handle paginated CA response - extract results array
+      let caList: CertificateAuthority[] = [];
+      if (Array.isArray(casData)) {
+        caList = casData;
+      } else if (casData?.results) {
+        caList = casData.results;
+      }
+      
+      // Parse CAs to add status field based on revoked flag
+      const parsedCAs = caList.map((ca) => {
+        const dnParts = ca.distinguishedName?.split(',').reduce((acc, part) => {
+          const [key, value] = part.trim().split('=');
+          acc[key] = value;
+          return acc;
+        }, {} as Record<string, string>) || {};
+        
+        return {
+          ...ca,
+          commonName: dnParts['CN'] || ca.commonName || ca.alias,
+          organization: dnParts['O'] || ca.organization,
+          status: ca.revoked ? "REVOKED" : "ACTIVE",
+        };
+      });
+      
+      setCas(parsedCAs);
+      
+      // Set templates data
+      setTemplates(Array.isArray(templatesData) ? templatesData : []);
+      
     } catch (error) {
       console.error("Failed to fetch data:", error);
       toast.error("Failed to fetch data");
+      setCas([]); // Ensure cas is always an array even on error
+      setTemplates([]); // Ensure templates is always an array even on error
     } finally {
       setLoading(false);
     }
@@ -199,14 +231,14 @@ export default function CertificateTemplates() {
                         <SelectContent>
                           {cas.length > 0 ? (
                             cas.map((ca) => (
-                              <SelectItem key={ca.id} value={ca.alias}>
-                                {ca.alias}
+                              <SelectItem key={ca.id || ca.alias} value={ca.alias}>
+                                {ca.commonName || ca.alias} ({ca.alias})
                               </SelectItem>
                             ))
                           ) : (
                             <>
-                              <SelectItem value="InternalCA">Internal CA</SelectItem>
-                              <SelectItem value="ProductionCA">Production CA</SelectItem>
+                              <SelectItem key="InternalCA" value="InternalCA">Internal CA</SelectItem>
+                              <SelectItem key="ProductionCA" value="ProductionCA">Production CA</SelectItem>
                             </>
                           )}
                         </SelectContent>

@@ -9,9 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Key, Copy, Trash2, Clock, Shield, Eye, EyeOff, RefreshCw, AlertTriangle } from "lucide-react";
+import { Plus, Key, Copy, Trash2, Clock, Shield, Eye, EyeOff, RefreshCw, AlertTriangle, Search } from "lucide-react";
 import { securityApi } from "@/lib/api";
 import type { ApiKey } from "@/lib/api/types";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function ApiKeys() {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
@@ -24,6 +26,13 @@ export default function ApiKeys() {
     permissions: [] as string[],
     expiresInDays: 365,
   });
+
+  // Pagination and filtering state
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("name");
+  const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("ASC");
 
   const availablePermissions = [
     { value: "certificate:read", label: "Read Certificates" },
@@ -118,6 +127,69 @@ export default function ApiKeys() {
     if (daysUntilExpiry <= 30) return { status: "expiring", label: `${daysUntilExpiry}d`, variant: "outline" as const };
     return { status: "valid", label: `${daysUntilExpiry}d`, variant: "secondary" as const };
   };
+
+  // Client-side filtering and sorting
+  const filteredAndSortedKeys = () => {
+    // Filter by search query
+    let filtered = apiKeys.filter((key) => {
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase();
+      return (
+        key.name.toLowerCase().includes(query) ||
+        key.keyPrefix.toLowerCase().includes(query) ||
+        key.permissions.some((p) => p.toLowerCase().includes(query))
+      );
+    });
+
+    // Sort
+    filtered = filtered.sort((a, b) => {
+      let aVal: any;
+      let bVal: any;
+
+      switch (sortBy) {
+        case "name":
+          aVal = a.name;
+          bVal = b.name;
+          break;
+        case "createdAt":
+          aVal = new Date(a.createdAt).getTime();
+          bVal = new Date(b.createdAt).getTime();
+          break;
+        case "expiresAt":
+          aVal = a.expiresAt ? new Date(a.expiresAt).getTime() : 0;
+          bVal = b.expiresAt ? new Date(b.expiresAt).getTime() : 0;
+          break;
+        case "lastUsedAt":
+          aVal = a.lastUsedAt ? new Date(a.lastUsedAt).getTime() : 0;
+          bVal = b.lastUsedAt ? new Date(b.lastUsedAt).getTime() : 0;
+          break;
+        default:
+          aVal = a.name;
+          bVal = b.name;
+      }
+
+      if (typeof aVal === "string") {
+        return sortOrder === "ASC" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+      return sortOrder === "ASC" ? aVal - bVal : bVal - aVal;
+    });
+
+    return filtered;
+  };
+
+  const displayedKeys = () => {
+    const filtered = filteredAndSortedKeys();
+    const start = page * pageSize;
+    const end = start + pageSize;
+    return filtered.slice(start, end);
+  };
+
+  const totalPages = Math.ceil(filteredAndSortedKeys().length / pageSize);
+
+  // Reset page when search changes
+  useEffect(() => {
+    setPage(0);
+  }, [searchQuery, sortBy, sortOrder]);
 
   if (loading) {
     return (
@@ -288,10 +360,62 @@ export default function ApiKeys() {
         {/* API Keys Table */}
         <Card>
           <CardHeader>
-            <CardTitle>API Keys</CardTitle>
-            <CardDescription>Manage your API keys and their permissions</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>API Keys</CardTitle>
+                <CardDescription>Manage your API keys and their permissions</CardDescription>
+              </div>
+              <div className="flex items-center gap-4">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search keys..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8 w-[200px] h-9"
+                  />
+                </div>
+
+                {/* Sorting Controls */}
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm whitespace-nowrap">Sort by:</Label>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="w-[180px] h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="name">Name</SelectItem>
+                      <SelectItem value="createdAt">Created Date</SelectItem>
+                      <SelectItem value="expiresAt">Expiry Date</SelectItem>
+                      <SelectItem value="lastUsedAt">Last Used</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm whitespace-nowrap">Order:</Label>
+                  <Button
+                    variant={sortOrder === "ASC" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSortOrder("ASC")}
+                    className="h-9"
+                  >
+                    Ascending
+                  </Button>
+                  <Button
+                    variant={sortOrder === "DESC" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSortOrder("DESC")}
+                    className="h-9"
+                  >
+                    Descending
+                  </Button>
+                </div>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -305,7 +429,14 @@ export default function ApiKeys() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {apiKeys.map((key) => {
+                {displayedKeys().length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      {searchQuery ? "No API keys match your search" : "No API keys found"}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  displayedKeys().map((key) => {
                   const expiryStatus = getExpiryStatus(key.expiresAt);
                   return (
                     <TableRow key={key.id}>
@@ -361,9 +492,23 @@ export default function ApiKeys() {
                       </TableCell>
                     </TableRow>
                   );
-                })}
+                })
+                )}
               </TableBody>
             </Table>
+
+            {/* Pagination */}
+            <DataTablePagination
+              currentPage={page}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              totalItems={filteredAndSortedKeys().length}
+              onPageChange={setPage}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setPage(0);
+              }}
+            />
           </CardContent>
         </Card>
       </div>

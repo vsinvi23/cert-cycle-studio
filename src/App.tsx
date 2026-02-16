@@ -19,8 +19,10 @@ import NetworkScan from "./pages/NetworkScan";
 import Reports from "./pages/Reports";
 import CreateUser from "./pages/CreateUser";
 import ManageUser from "./pages/ManageUser";
+import EditUser from "./pages/EditUser";
 import CreateRole from "./pages/CreateRole";
 import ManageRole from "./pages/ManageRole";
+import Permissions from "./pages/Permissions";
 import Alerts from "./pages/Alerts";
 import Jobs from "./pages/Jobs";
 import Sessions from "./pages/Sessions";
@@ -119,10 +121,14 @@ const App = () => (
             <Route path="/api-keys" element={<ProtectedRoute><ApiKeys /></ProtectedRoute>} />
             <Route path="/sessions" element={<ProtectedRoute><Sessions /></ProtectedRoute>} />
             <Route path="/rate-limits" element={<ProtectedRoute><RateLimitMonitoring /></ProtectedRoute>} />
+            <Route path="/permissions" element={<ProtectedRoute><Permissions /></ProtectedRoute>} />
             <Route path="/user-management/create" element={<ProtectedRoute><CreateUser /></ProtectedRoute>} />
             <Route path="/user-management/manage" element={<ProtectedRoute><ManageUser /></ProtectedRoute>} />
+            <Route path="/user-management/edit/:userId" element={<ProtectedRoute><EditUser /></ProtectedRoute>} />
             <Route path="/user-management/create-role" element={<ProtectedRoute><CreateRole /></ProtectedRoute>} />
             <Route path="/user-management/manage-role" element={<ProtectedRoute><ManageRole /></ProtectedRoute>} />
+            <Route path="/create-role" element={<ProtectedRoute><CreateRole /></ProtectedRoute>} />
+            <Route path="/manage-role" element={<ProtectedRoute><ManageRole /></ProtectedRoute>} />
             
             {/* AI & Analytics */}
             <Route path="/ai-insights" element={<ProtectedRoute><AIInsights /></ProtectedRoute>} />

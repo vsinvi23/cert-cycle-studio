@@ -9,23 +9,33 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Bell, Plus, Search, Mail, Webhook, MessageSquare, History } from "lucide-react";
+import { Loader2, Bell, Plus, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
+import { SearchBar } from "@/components/ui/search-bar";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { alertsApi } from "@/lib/api";
-import type { AlertConfiguration, AlertHistory } from "@/lib/api/types";
+import type { AlertConfiguration } from "@/lib/api/types";
+import { extractContent } from "@/lib/api/types/pagination";
 
 export default function Alerts() {
   const [alerts, setAlerts] = useState<AlertConfiguration[]>([]);
-  const [history, setHistory] = useState<AlertHistory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"config" | "history">("config");
+  
+  // Pagination state
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("DESC");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [enabledFilter, setEnabledFilter] = useState<string>("all");
 
   // Form state
   const [formData, setFormData] = useState<{
     name: string;
-    alertType: "EXPIRATION" | "REVOCATION" | "ISSUANCE" | "COMPLIANCE";
+    alertType: "EXPIRATION" | "REVOCATION" | "ISSUANCE" | "COMPLIANCE" | "RENEWAL" | "SECURITY";
     enabled: boolean;
     thresholdDays: number;
     emailRecipients: string;
@@ -43,19 +53,37 @@ export default function Alerts() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [
+    page, pageSize, searchQuery, sortBy, sortOrder, enabledFilter
+  ]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [configData, historyData] = await Promise.all([
-        alertsApi.getConfigurations().catch(() => []),
-        alertsApi.getHistory(),
-      ]);
-      setAlerts(configData || []);
-      setHistory(historyData || []);
+      // Fetch alert configurations with pagination
+      const configData = await alertsApi.getConfigurations({
+        page: page,
+        size: pageSize,
+        search: searchQuery || undefined,
+        sortBy: sortBy,
+        sortOrder: sortOrder,
+      });
+      
+      if (configData && typeof configData === 'object' && 'content' in configData) {
+        setAlerts(Array.isArray(configData.content) ? configData.content : []);
+        setTotalPages(configData.totalPages || 0);
+        setTotalElements(configData.totalElements || 0);
+      } else {
+        const alertsList = extractContent(configData);
+        setAlerts(alertsList);
+        setTotalElements(alertsList.length);
+        setTotalPages(1);
+      }
     } catch (error) {
       console.error("Failed to fetch alerts:", error);
+      setAlerts([]);
+      setTotalElements(0);
+      setTotalPages(0);
     } finally {
       setLoading(false);
     }
@@ -78,8 +106,28 @@ export default function Alerts() {
       REVOCATION: "bg-red-500/10 text-red-500",
       ISSUANCE: "bg-green-500/10 text-green-500",
       COMPLIANCE: "bg-blue-500/10 text-blue-500",
+      RENEWAL: "bg-purple-500/10 text-purple-500",
+      SECURITY: "bg-pink-500/10 text-pink-500",
     };
     return <Badge className={colors[type] || ""}>{type}</Badge>;
+  };
+
+  const getSeverityBadge = (severity: string) => {
+    const variants: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
+      CRITICAL: "destructive",
+      HIGH: "destructive",
+      MEDIUM: "default",
+      LOW: "secondary",
+      INFO: "outline",
+    };
+    const colors: Record<string, string> = {
+      CRITICAL: "bg-red-600",
+      HIGH: "bg-orange-500",
+      MEDIUM: "bg-yellow-500",
+      LOW: "bg-blue-500",
+      INFO: "bg-gray-500",
+    };
+    return <Badge variant={variants[severity]} className={colors[severity]}>{severity}</Badge>;
   };
 
   const getDeliveryStatusBadge = (status: string) => {
@@ -136,7 +184,7 @@ export default function Alerts() {
                   <Select
                     value={formData.alertType}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, alertType: value as "EXPIRATION" | "REVOCATION" | "ISSUANCE" | "COMPLIANCE" })
+                      setFormData({ ...formData, alertType: value as any })
                     }
                   >
                     <SelectTrigger>
@@ -147,6 +195,8 @@ export default function Alerts() {
                       <SelectItem value="REVOCATION">Revocation</SelectItem>
                       <SelectItem value="ISSUANCE">Issuance</SelectItem>
                       <SelectItem value="COMPLIANCE">Compliance</SelectItem>
+                      <SelectItem value="RENEWAL">Renewal</SelectItem>
+                      <SelectItem value="SECURITY">Security</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -193,135 +243,144 @@ export default function Alerts() {
           </Dialog>
         </div>
 
-        {/* Summary Cards */}
+        {/* Summary Card */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Alerts</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Configurations</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
                 <Bell className="h-5 w-5 text-primary" />
-                <span className="text-2xl font-bold">{history.length}</span>
+                <span className="text-2xl font-bold">{totalElements}</span>
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Email Alerts</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Active Alerts</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <Mail className="h-5 w-5 text-blue-500" />
+                <Bell className="h-5 w-5 text-green-500" />
                 <span className="text-2xl font-bold">
-                  {history.filter(h => h.sentTo?.includes("@")).length}
+                  {alerts.filter(a => a.enabled).length}
                 </span>
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Webhook Alerts</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Expiration Alerts</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <Webhook className="h-5 w-5 text-purple-500" />
+                <Bell className="h-5 w-5 text-orange-500" />
                 <span className="text-2xl font-bold">
-                  {history.filter(h => h.sentTo?.includes("http")).length}
+                  {alerts.filter(a => a.alertType === "EXPIRATION").length}
                 </span>
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Failed Alerts</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Security Alerts</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-red-500" />
+                <Bell className="h-5 w-5 text-red-500" />
                 <span className="text-2xl font-bold">
-                  {history.filter(h => h.deliveryStatus === "FAILED").length}
+                  {alerts.filter(a => a.alertType === "SECURITY" || a.alertType === "REVOCATION").length}
                 </span>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 border-b">
-          <Button
-            variant={activeTab === "config" ? "default" : "ghost"}
-            onClick={() => setActiveTab("config")}
-          >
-            <Bell className="h-4 w-4 mr-2" />
-            Configurations
-          </Button>
-          <Button
-            variant={activeTab === "history" ? "default" : "ghost"}
-            onClick={() => setActiveTab("history")}
-          >
-            <History className="h-4 w-4 mr-2" />
-            Alert History
-          </Button>
-        </div>
-
-        {/* Search */}
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search alerts..."
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-
-        {activeTab === "history" && (
-          <Card>
+        {/* Alert Configurations */}
+        <Card>
             <CardHeader>
-              <CardTitle>Alert History</CardTitle>
-              <CardDescription>Recent alert deliveries and their status</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Message</TableHead>
-                    <TableHead>Sent To</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Triggered At</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {history.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground">
-                        No alert history found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    history.map((alert) => (
-                      <TableRow key={alert.id}>
-                        <TableCell>{getAlertTypeBadge(alert.alertType)}</TableCell>
-                        <TableCell className="max-w-xs truncate">{alert.message}</TableCell>
-                        <TableCell className="max-w-xs truncate">{alert.sentTo}</TableCell>
-                        <TableCell>{getDeliveryStatusBadge(alert.deliveryStatus)}</TableCell>
-                        <TableCell>{new Date(alert.triggeredAt).toLocaleString()}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
+              <div className="flex flex-col gap-4">
+                <div>
+                  <CardTitle>Alert Configurations ({totalElements} total)</CardTitle>
+                  <CardDescription>Manage your alert rules and delivery channels</CardDescription>
+                </div>
+                
+                {/* Search and Filters Row */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <SearchBar
+                    value={searchQuery}
+                    onChange={(value) => {
+                      setSearchQuery(value);
+                      setPage(0);
+                    }}
+                    placeholder="Search by name, type..."
+                  />
+                  <Select value={enabledFilter} onValueChange={(value) => { setEnabledFilter(value); setPage(0); }}>
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="enabled">Enabled Only</SelectItem>
+                      <SelectItem value="disabled">Disabled Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-        {activeTab === "config" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Alert Configurations</CardTitle>
-              <CardDescription>Manage your alert rules and delivery channels</CardDescription>
+                {/* Sorting Controls */}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 border-t pt-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-muted-foreground">Sort by:</span>
+                    <Select
+                      value={sortBy}
+                      onValueChange={(value) => {
+                        setSortBy(value);
+                        setPage(0);
+                      }}
+                    >
+                      <SelectTrigger className="w-[180px] h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="name">Name</SelectItem>
+                        <SelectItem value="alertType">Alert Type</SelectItem>
+                        <SelectItem value="enabled">Status</SelectItem>
+                        <SelectItem value="createdAt">Created Date</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-muted-foreground">Order:</span>
+                    <div className="flex gap-1">
+                      <Button
+                        variant={sortOrder === "ASC" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          setSortOrder("ASC");
+                          setPage(0);
+                        }}
+                        className="h-9"
+                      >
+                        <ArrowUp className="h-4 w-4 mr-1" />
+                        Ascending
+                      </Button>
+                      <Button
+                        variant={sortOrder === "DESC" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          setSortOrder("DESC");
+                          setPage(0);
+                        }}
+                        className="h-9"
+                      >
+                        <ArrowDown className="h-4 w-4 mr-1" />
+                        Descending
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {alerts.length === 0 ? (
@@ -342,10 +401,7 @@ export default function Alerts() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {alerts.filter(a => 
-                      a.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      a.alertType?.toLowerCase().includes(searchQuery.toLowerCase())
-                    ).map((alert) => (
+                    {alerts.map((alert) => (
                       <TableRow key={alert.id}>
                         <TableCell className="font-medium">{alert.name}</TableCell>
                         <TableCell>{getAlertTypeBadge(alert.alertType)}</TableCell>
@@ -362,9 +418,21 @@ export default function Alerts() {
                   </TableBody>
                 </Table>
               )}
+              {alerts.length > 0 && totalPages > 0 && (
+                <DataTablePagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  pageSize={pageSize}
+                  totalElements={totalElements}
+                  onPageChange={setPage}
+                  onPageSizeChange={(size) => {
+                    setPageSize(size);
+                    setPage(0);
+                  }}
+                />
+              )}
             </CardContent>
           </Card>
-        )}
       </div>
     </AppLayout>
   );

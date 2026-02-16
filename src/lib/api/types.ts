@@ -10,6 +10,10 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   token: string;
+  username: string;
+  email: string;
+  roles?: string[];
+  permissions?: string[];
 }
 
 export interface RegisterRequest {
@@ -26,7 +30,112 @@ export interface RegisterResponse {
 export interface User {
   id: number;
   username: string;
+  email: string;
+  role: string;
   password?: string;
+}
+
+// User Management - Complete Types
+export interface UserResponse {
+  id: number;
+  username: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
+  enabled: boolean;
+  accountNonExpired?: boolean;
+  accountNonLocked: boolean;
+  credentialsNonExpired?: boolean;
+  roles: Role[];
+  department?: string;
+  phoneNumber?: string;
+  createdAt: string;
+  updatedAt?: string;
+  lastLoginAt?: string | null;
+  lastLogin?: string | null;
+  createdBy?: string | null;
+  updatedBy?: string | null;
+  lastLoginIp?: string | null;
+  failedLoginAttempts: number;
+  lockedUntil?: string | null;
+}
+
+export interface CreateUserRequest {
+  username: string;
+  password: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  enabled?: boolean;
+  roleIds?: number[];
+  department?: string;
+  phoneNumber?: string;
+}
+
+export interface UpdateUserRequest {
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  enabled?: boolean;
+  department?: string;
+  phoneNumber?: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword?: string; // Optional for admin, required for self-service
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface UserStatistics {
+  totalUsers: number;
+  enabledUsers: number;
+  disabledUsers: number;
+  lockedUsers: number;
+  activePercentage: number;
+  usersByRole: Record<string, number>;
+  usersByDepartment: Record<string, number>;
+  recentlyCreated: number;
+  lastUpdated: string;
+}
+
+export interface PaginatedResponse<T> {
+  content: T[];
+  pageable: {
+    pageNumber: number;
+    pageSize: number;
+    sort: {
+      sorted: boolean;
+      unsorted: boolean;
+    };
+  };
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+  first: boolean;
+  size: number;
+  number: number;
+  numberOfElements: number;
+}
+
+// CA List Response
+export interface CAInfo {
+  alias: string;
+  subject: string;
+  notBefore: string;
+  notAfter: string;
+  algorithm: string;
+  keySize: number;
+  signatureAlgorithm: string;
+  hasPrivateKey: boolean;
+}
+
+export interface CAListResponse {
+  total: number;
+  page: number;
+  size: number;
+  results: CAInfo[];
 }
 
 // Dashboard Metrics
@@ -117,17 +226,35 @@ export interface Certificate {
   expired?: boolean;
 }
 
-// Certificate Add Request
+// Certificate Add Request (Manual Import)
 export interface AddCertificateRequest {
   userId: number;
-  alias: string;
-  commonName: string;
-  organization?: string;
-  validityDays?: number;
+  certificateName: string;
+  certData: string;
+}
+
+// Certificate Response (from manual add)
+export interface CertificateResponse {
+  id: number;
+  certificateName: string;
+  certData: string;
+  subject?: string;
+  commonName?: string;
+  validFrom?: string;
+  validTo?: string;
+  serialNumber?: string;
+  issuer?: string;
+  createdAt: string;
+  updatedAt?: string;
+  createdBy?: User;
+  user?: User; // Legacy support
+  expired?: boolean;
 }
 
 // Issue Certificate Request
 export interface IssueCertificateRequest {
+  host: string;
+  port?: number;
   commonName: string;
   organization?: string;
   organizationalUnit?: string;
@@ -149,44 +276,59 @@ export type RevokeReason =
   | "SUPERSEDED" 
   | "CESSATION_OF_OPERATION";
 
-// Nmap Certificate Scan
+// Nmap Certificate Scan Types
+export interface NmapPortSpec {
+  port?: number;
+  start?: number;
+  end?: number;
+}
+
 export interface NmapTargetRequest {
   host: string;
-  port?: number;
+  ports: NmapPortSpec[];
 }
 
 export interface NmapScanRequest {
   targets: NmapTargetRequest[];
-  ports?: string;
 }
 
 export interface NmapCertificateScan {
   id: number;
   host: string;
-  port: number;
-  commonName: string;
-  issuer: string;
-  validFrom: string;
-  validTo: string;
-  algorithm: string;
-  keySize: number;
-  serialNumber: string;
-  fingerprint: string;
-  subjectAlternativeNames?: string[];
-  scanDate: string;
+  portsCsv: string;
+  algorithm: string | null;
+  notBefore: string | null;
+  notAfter: string | null;
+  publicKeyInfo: string | null;
+  publicKeySize: number | null;
+  fingerprintSha256: string | null;
+  pem: string | null;
+  altNames: string | null;
+  createdAt: string;
+  createdBy: string;
+  issuerCA: string | null;
+  renewedFromId: number | null;
+  renewedBy: string | null;
+  revokedAt: string | null;
+  revokedBy: string | null;
+  revokedReason: string | null;
+  crlUrl: string | null;
+  ocspUrl: string | null;
+  error: string | null;
+  processExitCode: number;
 }
 
 // Certificate Authority
 export interface CreateCARequest {
-  alias: string;
-  cn: string;
+  commonName: string;
   organization?: string;
   organizationalUnit?: string;
   locality?: string;
   state?: string;
   country?: string;
-  signatureAlgorithm?: string;
-  validityInDays?: number;
+  signatureAlgorithm: "RSA2048" | "RSA3072" | "RSA4096" | "ECDSA_P256" | "ECDSA_P384";
+  validityInDays?: number; // default: 3650
+  alias: string;
 }
 
 export interface ImportCARequest {
@@ -226,6 +368,8 @@ export interface CreateUserCertificateRequest {
   locality?: string;
   state?: string;
   country?: string;
+  host?: string;
+  port?: number;
   keyPairAlgorithm: string;
   validityInDays?: number;
   alias: string;
@@ -240,6 +384,9 @@ export interface Role {
   description: string;
   permissions: string[];
   createdAt: string;
+  updatedAt?: string;
+  userCount?: number;
+  isSystemRole?: boolean;
 }
 
 export interface CreateRoleRequest {
@@ -248,11 +395,48 @@ export interface CreateRoleRequest {
   permissions: string[];
 }
 
+export interface UpdateRoleRequest {
+  name?: string;
+  description?: string;
+  permissions?: string[];
+}
+
+export interface CloneRoleRequest {
+  newName: string;
+  description?: string;
+}
+
+export interface RoleStatistics {
+  totalRoles: number;
+  systemRoles: number;
+  customRoles: number;
+  totalPermissions: number;
+  roleDistribution: Record<string, number>;
+  mostUsedRole: string;
+  leastUsedRole: string;
+  averagePermissionsPerRole: number;
+}
+
+export interface AvailablePermissions {
+  permissions: string[];
+  totalCount: number;
+  categorized: {
+    CERTIFICATE: string[];
+    CA: string[];
+    USER: string[];
+    ROLE: string[];
+    REPORTING: string[];
+    SYSTEM: string[];
+    DISCOVERY: string[];
+    ALERT: string[];
+  };
+}
+
 // Alert Configuration
 export interface AlertConfiguration {
   id: number;
   name: string;
-  alertType: "EXPIRATION" | "REVOCATION" | "ISSUANCE" | "COMPLIANCE";
+  alertType: "EXPIRATION" | "REVOCATION" | "ISSUANCE" | "COMPLIANCE" | "RENEWAL" | "SECURITY" | string;
   enabled: boolean;
   thresholdDays?: number;
   emailRecipients?: string;
@@ -264,7 +448,7 @@ export interface AlertConfiguration {
 
 export interface AlertConfigurationRequest {
   name: string;
-  alertType: "EXPIRATION" | "REVOCATION" | "ISSUANCE" | "COMPLIANCE";
+  alertType: "EXPIRATION" | "REVOCATION" | "ISSUANCE" | "COMPLIANCE" | "RENEWAL" | "SECURITY" | string;
   enabled?: boolean;
   thresholdDays?: number;
   emailRecipients?: string;
@@ -297,16 +481,16 @@ export interface GeneralAlertRequest {
 // Alert History
 export interface AlertHistory {
   id: number;
-  alertType: string;
-  severity: string;
+  alertType: "EXPIRATION" | "REVOCATION" | "ISSUANCE" | "COMPLIANCE" | "RENEWAL" | "SECURITY" | string;
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO" | string;
   message: string;
   certificateId?: number;
   certificateHost?: string;
   sentTo: string;
-  deliveryStatus: string;
-  errorMessage?: string;
+  deliveryStatus: "DELIVERED" | "PENDING" | "FAILED" | string;
+  errorMessage?: string | null;
   triggeredAt: string;
-  sentAt?: string;
+  sentAt?: string | null;
 }
 
 // Webhook Registration
@@ -368,27 +552,129 @@ export interface DiscoveryResult {
 // Discovery Scan Requests
 export interface LDAPScanRequest {
   server: string;
-  port: number;
+  port: string;
   baseDN: string;
-  username?: string;
-  password?: string;
+  username: string;
+  password: string;
+  useSSL?: string;
+  searchFilter?: string;
+}
+
+export interface LDAPScanResponse {
+  status: string;
+  certificatesFound: number;
+  scanDuration: string;
+  certificates: Array<{
+    dn: string;
+    subject: string;
+    issuer: string;
+    notBefore: string;
+    notAfter: string;
+    serialNumber: string;
+    algorithm: string;
+    keySize: number;
+  }>;
+  errors: string[];
 }
 
 export interface CloudScanRequest {
-  provider: "AWS" | "AZURE" | "GCP";
-  credentials: Record<string, string>;
+  // AWS
+  accessKeyId?: string;
+  secretAccessKey?: string;
+  region?: string;
+  services?: string;
+  // Azure
+  subscriptionId?: string;
+  clientId?: string;
+  clientSecret?: string;
+  tenantId?: string;
+  resources?: string;
+  // GCP
+  projectId?: string;
+  serviceAccountKey?: string;
 }
 
-export interface FilesystemScanRequest {
-  paths: string[];
-  fileExtensions?: string[];
+export interface CloudScanResponse {
+  status: string;
+  provider: string;
+  region?: string;
+  certificatesFound: number;
+  scanDuration: string;
+  certificates: Array<{
+    certificateArn?: string;
+    domainName: string;
+    subjectAlternativeNames?: string[];
+    status: string;
+    type?: string;
+    keyAlgorithm: string;
+    notBefore: string;
+    notAfter: string;
+    inUseBy?: string[];
+    renewalEligibility?: string;
+  }>;
+  errors: string[];
+}
+
+export interface FilesystemScanResponse {
+  status: string;
+  path: string;
+  filesScanned: number;
+  certificatesFound: number;
+  scanDuration: string;
+  certificates: Array<{
+    filePath: string;
+    fileName: string;
+    fileSize: string;
+    fileType: string;
+    subject: string;
+    issuer: string;
+    notBefore: string;
+    notAfter: string;
+    algorithm: string;
+    keySize: number;
+    lastModified: string;
+  }>;
+  errors: Array<{
+    file: string;
+    error: string;
+  }>;
 }
 
 export interface ScheduleDiscoveryRequest {
   name: string;
-  type: "LDAP" | "CLOUD" | "FILESYSTEM";
+  discoveryType: "NMAP" | "LDAP" | "CLOUD_AWS" | "CLOUD_AZURE" | "CLOUD_GCP" | "FILESYSTEM";
+  configuration: any;
   schedule: string;
-  config: Record<string, unknown>;
+  enabled?: boolean;
+  notifyOnCompletion?: boolean;
+  notifyOnErrors?: boolean;
+  notificationEmail?: string;
+}
+
+export interface ScheduledDiscovery {
+  id: number;
+  name: string;
+  discoveryType: string;
+  configuration: any;
+  schedule: string;
+  enabled: boolean;
+  nextRunTime: string;
+  lastRunTime: string | null;
+  lastRunStatus: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DiscoveryChange {
+  changeId: number;
+  changeType: "NEW_CERTIFICATE" | "CERTIFICATE_EXPIRED" | "CERTIFICATE_RENEWED" | "CERTIFICATE_REMOVED" | "CERTIFICATE_MODIFIED";
+  timestamp: string;
+  discoveryType: string;
+  certificate?: any;
+  oldCertificate?: any;
+  newCertificate?: any;
+  details: string;
 }
 
 // Auto Renew Configuration
@@ -472,45 +758,57 @@ export interface BackgroundJob {
   jobType: string;
   status: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
   progress: number;
-  result?: string;
+  result?: any;
+  errorMessage?: string;
   createdBy: number;
   startedAt?: string;
   completedAt?: string;
   createdAt: string;
-  finished: boolean;
+  finished?: boolean;
   durationSeconds?: number;
-  running: boolean;
+  running?: boolean;
 }
 
 // Session Management
 export interface UserSession {
   id: number;
   userId: number;
+  username?: string;
   sessionToken: string;
   ipAddress: string;
   userAgent: string;
+  active: boolean;
   createdAt: string;
   lastActivityAt: string;
   expiresAt: string;
-  isActive: boolean;
+  terminatedAt?: string | null;
+  expired: boolean;
+  valid: boolean;
 }
 
 export interface SessionAnalytics {
   totalSessions: number;
+  currentActiveSessions: UserSession[];
+  terminatedSessions: number;
   activeSessions: number;
-  deviceBreakdown: Record<string, number>;
-  ipAddresses: string[];
-  averageSessionDuration: number;
-  loginFrequency: Record<string, number>;
+  averageSessionDurationMinutes: number;
+  uniqueIpAddresses: number;
+  username: string;
+  expiredSessions: number;
+  deviceBreakdown?: Record<string, number>;
+  ipAddresses?: string[];
+  loginFrequency?: Record<string, number>;
 }
 
 export interface SuspiciousActivity {
-  userId: number;
+  multipleIpAddresses: boolean;
+  recentSessionCount: number;
+  unusualSessionCount: boolean;
+  suspiciousConcurrentSessions: boolean;
+  activeConcurrentSessions: number;
+  suspicious: boolean;
+  uniqueIpAddresses: number;
   username: string;
-  uniqueIps: number;
-  ipAddresses: string[];
-  lastActivityAt: string;
-  riskLevel: "LOW" | "MEDIUM" | "HIGH";
 }
 
 // Rate Limit
@@ -542,12 +840,15 @@ export interface AcmeProvider {
   id: number;
   name: string;
   directoryUrl: string;
-  providerType: "LETS_ENCRYPT" | "ZEROSSL" | "BUYPASS" | "GOOGLE_TRUST";
+  providerType?: "LETS_ENCRYPT" | "ZEROSSL" | "BUYPASS" | "GOOGLE_TRUST";
   type: "LETS_ENCRYPT_PRODUCTION" | "LETS_ENCRYPT_STAGING" | "ZEROSSL" | "BUYPASS" | "CUSTOM"; // Legacy
   description?: string;
   isActive: boolean;
   isStaging?: boolean;
   requiresEab?: boolean;
+  termsOfServiceUrl?: string;
+  website?: string;
+  rateLimitPerWeek?: number;
   createdAt: string;
   updatedAt?: string;
 }

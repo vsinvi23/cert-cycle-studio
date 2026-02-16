@@ -26,7 +26,7 @@ import { Progress } from "@/components/ui/progress";
 export default function Sessions() {
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [analytics, setAnalytics] = useState<SessionAnalytics | null>(null);
-  const [suspiciousActivities, setSuspiciousActivities] = useState<SuspiciousActivity[]>([]);
+  const [suspiciousActivity, setSuspiciousActivity] = useState<SuspiciousActivity | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("active");
 
@@ -37,34 +37,21 @@ export default function Sessions() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [sessionsData, analyticsData, suspiciousData] = await Promise.all([
-        sessionsApi.getActive(),
+      const [analyticsData, suspiciousData] = await Promise.all([
         sessionsApi.getAnalytics().catch(() => null),
         sessionsApi.detectSuspiciousActivity().catch(() => null),
       ]);
-      setSessions(sessionsData || []);
       
-      // Parse analytics if it's a string
-      if (typeof analyticsData === 'string') {
-        try {
-          setAnalytics(JSON.parse(analyticsData));
-        } catch {
-          setAnalytics(null);
-        }
-      } else {
-        setAnalytics(analyticsData as SessionAnalytics | null);
+      // Set analytics data
+      if (analyticsData) {
+        setAnalytics(analyticsData);
+        // Extract sessions from analytics response
+        setSessions(analyticsData.currentActiveSessions || []);
       }
 
-      // Parse suspicious activity if it's a string
-      if (typeof suspiciousData === 'string') {
-        try {
-          const parsed = JSON.parse(suspiciousData);
-          setSuspiciousActivities(Array.isArray(parsed) ? parsed : [parsed]);
-        } catch {
-          setSuspiciousActivities([]);
-        }
-      } else if (Array.isArray(suspiciousData)) {
-        setSuspiciousActivities(suspiciousData);
+      // Set suspicious activity data (single object, not array)
+      if (suspiciousData) {
+        setSuspiciousActivity(suspiciousData);
       }
     } catch (error) {
       console.error("Failed to fetch session data:", error);
@@ -122,11 +109,12 @@ export default function Sessions() {
     }
   };
 
-  const activeCount = sessions.filter((s) => s.isActive).length;
-  const uniqueIps = new Set(sessions.map((s) => s.ipAddress)).size;
+  const activeCount = analytics?.activeSessions || sessions.filter((s) => s.active).length;
+  const uniqueIps = analytics?.uniqueIpAddresses || new Set(sessions.map((s) => s.ipAddress)).size;
   const mobileCount = sessions.filter((s) => 
     s.userAgent?.toLowerCase().includes("mobile") || 
-    s.userAgent?.toLowerCase().includes("android")
+    s.userAgent?.toLowerCase().includes("android") ||
+    s.userAgent?.toLowerCase().includes("iphone")
   ).length;
 
   if (loading) {
@@ -206,10 +194,10 @@ export default function Sessions() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-500/10">
-                  <AlertTriangle className="h-5 w-5 text-red-500" />
+                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${suspiciousActivity?.suspicious ? 'bg-red-500/10' : 'bg-green-500/10'}`}>
+                  <AlertTriangle className={`h-5 w-5 ${suspiciousActivity?.suspicious ? 'text-red-500' : 'text-green-500'}`} />
                 </div>
-                <span className="text-2xl font-bold">{suspiciousActivities.length}</span>
+                <span className="text-2xl font-bold">{suspiciousActivity?.suspicious ? 'Yes' : 'No'}</span>
               </div>
             </CardContent>
           </Card>
@@ -221,26 +209,14 @@ export default function Sessions() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
-                Session Analytics
+                Session Analytics for {analytics.username}
               </CardTitle>
               <CardDescription>Insights into session patterns and device usage</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <p className="text-sm font-medium mb-3">Device Breakdown</p>
-                  {analytics.deviceBreakdown && Object.entries(analytics.deviceBreakdown).map(([device, count]) => (
-                    <div key={device} className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-muted-foreground">{device}</span>
-                      <div className="flex items-center gap-2">
-                        <Progress value={(count / analytics.totalSessions) * 100} className="w-20 h-2" />
-                        <span className="text-sm font-medium w-8">{count}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div>
-                  <p className="text-sm font-medium mb-3">Session Stats</p>
+                  <p className="text-sm font-medium mb-3">Session Overview</p>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Total Sessions</span>
@@ -251,19 +227,58 @@ export default function Sessions() {
                       <span className="font-medium">{analytics.activeSessions}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Avg Duration</span>
-                      <span className="font-medium">{Math.round(analytics.averageSessionDuration / 60)} min</span>
+                      <span className="text-sm text-muted-foreground">Terminated</span>
+                      <span className="font-medium">{analytics.terminatedSessions}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Expired</span>
+                      <span className="font-medium">{analytics.expiredSessions}</span>
                     </div>
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm font-medium mb-3">Login Frequency</p>
-                  {analytics.loginFrequency && Object.entries(analytics.loginFrequency).slice(0, 5).map(([date, count]) => (
-                    <div key={date} className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-muted-foreground">{date}</span>
-                      <Badge variant="outline">{count}</Badge>
+                  <p className="text-sm font-medium mb-3">Session Details</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Avg Duration</span>
+                      <span className="font-medium">{Math.round(analytics.averageSessionDurationMinutes)} min</span>
                     </div>
-                  ))}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Unique IPs</span>
+                      <span className="font-medium">{analytics.uniqueIpAddresses}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Active Devices</span>
+                      <span className="font-medium">{analytics.currentActiveSessions?.length || 0}</span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-medium mb-3">Security Status</p>
+                  <div className="space-y-2">
+                    {suspiciousActivity && (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Multiple IPs</span>
+                          <Badge variant={suspiciousActivity.multipleIpAddresses ? "destructive" : "outline"}>
+                            {suspiciousActivity.multipleIpAddresses ? "Yes" : "No"}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Concurrent Sessions</span>
+                          <Badge variant={suspiciousActivity.suspiciousConcurrentSessions ? "destructive" : "outline"}>
+                            {suspiciousActivity.activeConcurrentSessions}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Recent Count</span>
+                          <Badge variant={suspiciousActivity.unusualSessionCount ? "destructive" : "outline"}>
+                            {suspiciousActivity.recentSessionCount}
+                          </Badge>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -276,8 +291,8 @@ export default function Sessions() {
             <TabsTrigger value="active">Active Sessions</TabsTrigger>
             <TabsTrigger value="suspicious">
               Suspicious Activity
-              {suspiciousActivities.length > 0 && (
-                <Badge variant="destructive" className="ml-2">{suspiciousActivities.length}</Badge>
+              {suspiciousActivity?.suspicious && (
+                <Badge variant="destructive" className="ml-2">!</Badge>
               )}
             </TabsTrigger>
           </TabsList>
@@ -322,8 +337,8 @@ export default function Sessions() {
                           <TableCell className="text-sm">{new Date(session.createdAt).toLocaleString()}</TableCell>
                           <TableCell className="text-sm">{new Date(session.lastActivityAt).toLocaleString()}</TableCell>
                           <TableCell>
-                            <Badge className={session.isActive ? "bg-green-500/10 text-green-500" : "bg-muted text-muted-foreground"}>
-                              {session.isActive ? "Active" : "Inactive"}
+                            <Badge className={session.active ? "bg-green-500/10 text-green-500" : "bg-muted text-muted-foreground"}>
+                              {session.active ? "Active" : "Inactive"}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -350,60 +365,102 @@ export default function Sessions() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-destructive" />
-                  Suspicious Activity
+                  Suspicious Activity Detection
                 </CardTitle>
-                <CardDescription>Users with unusual session patterns that may indicate security risks</CardDescription>
+                <CardDescription>Real-time analysis of unusual session patterns for {suspiciousActivity?.username}</CardDescription>
               </CardHeader>
               <CardContent>
-                {suspiciousActivities.length === 0 ? (
+                {!suspiciousActivity?.suspicious ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Shield className="h-16 w-16 text-green-500/50 mb-4" />
-                    <h3 className="text-lg font-medium">No Suspicious Activity</h3>
-                    <p className="text-muted-foreground">All sessions appear normal</p>
+                    <h3 className="text-lg font-medium">No Suspicious Activity Detected</h3>
+                    <p className="text-muted-foreground">All sessions appear normal and secure</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {suspiciousActivities.map((activity, index) => (
-                      <Card key={index} className="border-destructive/50">
-                        <CardContent className="pt-4">
-                          <div className="flex items-start justify-between">
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{activity.username}</span>
-                                {getRiskBadge(activity.riskLevel)}
-                              </div>
-                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" />
-                                  {activity.uniqueIps} unique IPs
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  Last active: {new Date(activity.lastActivityAt).toLocaleString()}
-                                </span>
-                              </div>
-                              {activity.ipAddresses && activity.ipAddresses.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                  {activity.ipAddresses.slice(0, 5).map((ip, i) => (
-                                    <Badge key={i} variant="outline" className="font-mono text-xs">
-                                      {ip}
-                                    </Badge>
-                                  ))}
-                                  {activity.ipAddresses.length > 5 && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      +{activity.ipAddresses.length - 5} more
-                                    </Badge>
-                                  )}
-                                </div>
-                              )}
+                    <Card className="border-destructive/50 bg-destructive/5">
+                      <CardContent className="pt-6">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-4 flex-1">
+                            <div className="flex items-center gap-2">
+                              <AlertTriangle className="h-5 w-5 text-destructive" />
+                              <span className="font-medium text-lg">{suspiciousActivity.username}</span>
+                              <Badge variant="destructive">Suspicious Activity Detected</Badge>
                             </div>
-                            <Button variant="outline" size="sm">
-                              Investigate
-                            </Button>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between p-3 bg-background rounded-lg border">
+                                  <div className="flex items-center gap-2">
+                                    <Globe className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm">Multiple IP Addresses</span>
+                                  </div>
+                                  <Badge variant={suspiciousActivity.multipleIpAddresses ? "destructive" : "outline"}>
+                                    {suspiciousActivity.multipleIpAddresses ? "Yes" : "No"}
+                                  </Badge>
+                                </div>
+                                
+                                <div className="flex items-center justify-between p-3 bg-background rounded-lg border">
+                                  <div className="flex items-center gap-2">
+                                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm">Unique IP Addresses</span>
+                                  </div>
+                                  <span className="font-medium">{suspiciousActivity.uniqueIpAddresses}</span>
+                                </div>
+                                
+                                <div className="flex items-center justify-between p-3 bg-background rounded-lg border">
+                                  <div className="flex items-center gap-2">
+                                    <Users className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm">Concurrent Sessions</span>
+                                  </div>
+                                  <Badge variant={suspiciousActivity.suspiciousConcurrentSessions ? "destructive" : "outline"}>
+                                    {suspiciousActivity.activeConcurrentSessions}
+                                  </Badge>
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between p-3 bg-background rounded-lg border">
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm">Recent Session Count</span>
+                                  </div>
+                                  <span className="font-medium">{suspiciousActivity.recentSessionCount}</span>
+                                </div>
+                                
+                                <div className="flex items-center justify-between p-3 bg-background rounded-lg border">
+                                  <div className="flex items-center gap-2">
+                                    <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm">Unusual Session Count</span>
+                                  </div>
+                                  <Badge variant={suspiciousActivity.unusualSessionCount ? "destructive" : "outline"}>
+                                    {suspiciousActivity.unusualSessionCount ? "Yes" : "No"}
+                                  </Badge>
+                                </div>
+                                
+                                <div className="flex items-center justify-between p-3 bg-background rounded-lg border">
+                                  <div className="flex items-center gap-2">
+                                    <Shield className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm">Suspicious Concurrent</span>
+                                  </div>
+                                  <Badge variant={suspiciousActivity.suspiciousConcurrentSessions ? "destructive" : "outline"}>
+                                    {suspiciousActivity.suspiciousConcurrentSessions ? "Yes" : "No"}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                              <AlertTriangle className="h-5 w-5 text-destructive" />
+                              <div>
+                                <p className="text-sm font-medium">Security Recommendation</p>
+                                <p className="text-sm text-muted-foreground">This account shows signs of suspicious activity. Review the session details and consider terminating suspicious sessions.</p>
+                              </div>
+                            </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
                 )}
               </CardContent>
