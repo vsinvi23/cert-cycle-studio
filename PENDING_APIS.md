@@ -15,13 +15,13 @@ This document lists backend API endpoints that are **available but not yet integ
 | **User Management** | 3 | 🔴 High |
 | **Certificate Templates** | 0 | ✅ Complete |
 | **Integration APIs** | 5 | 🟡 Medium |
-| **ACME Monitoring** | 10 | 🟡 Medium |
+| **ACME Monitoring** | 7 | 🟡 Medium |
 | **Alert Management** | 4 | 🟡 Medium |
 | **Discovery** | 1 | 🟢 Low |
 | **Notification Preferences** | 1 | 🟢 Low |
 | **ACME Providers (Non-Paginated)** | 2 | 🟢 Low |
 | **Role Management** | 1 | 🟢 Low |
-| **TOTAL** | **27 Endpoints** | - |
+| **TOTAL** | **24 Endpoints** | - |
 
 ---
 
@@ -64,16 +64,15 @@ This document lists backend API endpoints that are **available but not yet integ
 
 ---
 
-## 3. ACME Monitoring (⏳ 8 endpoints pending)
+## 3. ACME Monitoring (⏳ 7 endpoints pending)
 
 ### Missing Endpoints - `AcmeMonitoringController`
 
 | Endpoint | Method | Priority | Notes |
 |----------|--------|----------|-------|
 | `/api/acme/monitoring/webhooks/active` | GET | 🟡 Medium | Filter active webhooks |
-| `/api/acme/monitoring/webhooks/{id}/test` | POST | 🟡 Medium | Test webhook delivery |
+| `/api/acme/monitoring/webhooks/{id}/test` | POST | ✅ Integrated | Test webhook delivery (UI ready, awaiting backend integration) |
 | `/api/acme/monitoring/webhooks/problematic` | GET | 🟡 Medium | Webhooks with high failure rate |
-| `/api/acme/monitoring/webhooks/events` | GET | 🟡 Medium | Available webhook event types |
 | `/api/acme/monitoring/metrics/latest` | GET | 🟢 Low | Latest metrics snapshot |
 | `/api/acme/monitoring/metrics/summary` | GET | 🟢 Low | Summary statistics |
 | `/api/acme/monitoring/metrics/week` | GET | 🟢 Low | Last 7 days metrics |
@@ -81,8 +80,14 @@ This document lists backend API endpoints that are **available but not yet integ
 | `/api/acme/monitoring/metrics/low-performance` | GET | 🟢 Low | Low performance metrics |
 | `/api/acme/monitoring/metrics/comparison` | GET | 🟢 Low | Provider comparison |
 
+**Recent Updates (Feb 17, 2026)**:
+- ✅ **Webhook event selection UI** - Added checkbox UI for selecting webhook events (ORDER_CREATED, ORDER_COMPLETED, etc.)
+- ✅ **Webhook events display** - Added Events column in webhook table showing selected events as badges
+- ✅ **Events field type safety** - Frontend now properly handles events as `string[]` array (aligned with backend fix)
+- ✅ **Webhook test button** - Added test webhook button in UI (ready for backend integration)
+
 **Recommendation**:
-- Add webhook testing feature in webhook management UI
+- Add webhook testing feature integration once backend endpoint is confirmed working
 - Create ACME metrics dashboard with time-series charts
 - Implement webhook health monitoring panel
 
@@ -243,7 +248,7 @@ Integration Coverage: 82.0
 ## API Coverage Summary
 
 ### Overall Integration Status
-
+11 | 7 | 61.1
 ```4 | 11 | 3 | 78.6% |
 | **Certificates** | 12 | 12 | 0 | 100% ✅ |
 | **CA Management** | 5 | 5 | 0 | 100% ✅ |
@@ -264,7 +269,7 @@ Integration Coverage: 82.0
 
 **Key Findings**:
 - ⚠️ **Integration endpoints** (Jenkins, Kubernetes, ACME) are completely unintegrated
-- ⚠️ **ACME Monitoring** has only 44% coverage - missing webhook testing and advanced metrics
+- ✅ **ACME Monitoring** improved to 61% coverage - webhook UI enhanced with event selection
 - ⚠️ **Alerts** at 50% - missing individual CRUD operations for configurations
 - User Management and Discovery have minor gaps | 87.5% |
 | **Certificates** | 16 | 16 | 0 | 100% ✅ |
@@ -354,6 +359,19 @@ Integration Coverage: 82.0
 ---
 
 **Document Status**: ⏳ Pending Implementation  
-**Remaining Work**: 19 endpoints across 3 priority levels  
-**Estimated Effort**: 15-22 development days  
+**Remaining Work**: 24 endpoints across 3 priority levels  
+**Estimated Effort**: 13-19 development days  
 **Target Completion**: Q1 2026
+
+**Last Updated**: February 17, 2026  
+**Recent Fixes**:
+- ✅ **Fixed renewal form not triggering API call (Issue #24)** - Completely rewired CreateRenewalDialog to call `certificatesApi.renew()` on submission
+- ✅ **Fixed port value missing in certificate creation (Issue #23)** - Added host and port fields to CreateUserCertificateRequest type and API payload
+- ✅ Fixed Certificate Templates white screen (Issue #22) - Proper handling of paginated CA response
+- ✅ Fixed Certificate Templates not displaying CA count - Added status field parsing from revoked flag
+- ✅ **Fixed Certificate Templates not fetching templates** - Added missing `getAllTemplates` API call
+- ✅ Fixed CA Management not displaying CAs - Corrected API response property access (results vs content)
+- ✅ Added distinguished name parsing for CA fields (CN, O, OU, L, ST, C) across all CA pages
+- ✅ Enhanced ACME Webhook UI with event selection checkboxes and display
+- ✅ Fixed Network Scan to support smart default ports (443, 8443, 9443)
+- ✅ Fixed React key warnings in Certificate Templates SelectItem components

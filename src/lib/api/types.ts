@@ -368,6 +368,8 @@ export interface CreateUserCertificateRequest {
   locality?: string;
   state?: string;
   country?: string;
+  host?: string;
+  port?: number;
   keyPairAlgorithm: string;
   validityInDays?: number;
   alias: string;

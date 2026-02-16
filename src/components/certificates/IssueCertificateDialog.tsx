@@ -154,6 +154,8 @@ export function IssueCertificateDialog({ onSuccess }: IssueCertificateDialogProp
         locality: data.locality,
         state: data.state,
         country: data.country,
+        host: data.host,
+        port: data.port,
         keyPairAlgorithm: data.keyPairAlgorithm,
         validityInDays: data.validityInDays,
         alias: data.alias,

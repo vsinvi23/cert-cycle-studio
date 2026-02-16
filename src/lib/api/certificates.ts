@@ -146,6 +146,14 @@ export const certificatesApi = {
   },
 
   /**
+   * GET /api/certificates/templates
+   * Get all certificate templates
+   */
+  getAllTemplates: async (): Promise<CertificateTemplate[]> => {
+    return apiRequest<CertificateTemplate[]>("/api/certificates/templates");
+  },
+
+  /**
    * POST /api/certificates/templates/create
    * Create a reusable certificate template
    */

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -28,16 +28,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { certificatesApi } from "@/lib/api";
+import type { CertificateResponse } from "@/lib/api/types";
 
 const renewalSchema = z.object({
-  certificateAlias: z.string().min(1, "Certificate alias is required"),
-  certificateType: z.string().min(1, "Certificate type is required"),
-  currentExpiryDate: z.string().min(1, "Current expiry date is required"),
-  newValidityDays: z.string().min(1, "New validity period is required"),
-  reason: z.string().min(1, "Reason for renewal is required"),
-  priority: z.string().min(1, "Priority is required"),
+  certificateId: z.coerce.number().min(1, "Please select a certificate"),
+  reason: z.string().optional(),
 });
 
 type RenewalFormData = z.infer<typeof renewalSchema>;
@@ -46,39 +44,94 @@ export interface RenewalRequest extends RenewalFormData {
   id: string;
   status: "pending" | "in-progress" | "completed" | "rejected";
   createdAt: string;
+  certificateAlias?: string;
+  certificateType?: string;
+  currentExpiryDate?: string;
+  newValidityDays?: string;
+  priority?: string;
 }
 
 interface CreateRenewalDialogProps {
-  onSubmit: (data: RenewalRequest) => void;
+  onSubmit?: (data: RenewalRequest) => void;
+  onSuccess?: () => void;
   children?: React.ReactNode;
 }
 
-export function CreateRenewalDialog({ onSubmit, children }: CreateRenewalDialogProps) {
+export function CreateRenewalDialog({ onSubmit, onSuccess, children }: CreateRenewalDialogProps) {
   const [open, setOpen] = useState(false);
+  const [certificates, setCertificates] = useState<CertificateResponse[]>([]);
+  const [isLoadingCerts, setIsLoadingCerts] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      fetchCertificates();
+    }
+  }, [open]);
+
+  const fetchCertificates = async () => {
+    setIsLoadingCerts(true);
+    try {
+      const data = await certificatesApi.getAll({ page: 0, size: 1000 });
+      const certs = data && typeof data === 'object' && 'content' in data 
+        ? Array.isArray(data.content) ? data.content : []
+        : Array.isArray(data) ? data : [];
+      setCertificates(certs);
+    } catch (error) {
+      console.error("Failed to fetch certificates:", error);
+      toast.error("Failed to load certificates");
+      setCertificates([]);
+    } finally {
+      setIsLoadingCerts(false);
+    }
+  };
 
   const form = useForm<RenewalFormData>({
     resolver: zodResolver(renewalSchema),
     defaultValues: {
-      certificateAlias: "",
-      certificateType: "",
-      currentExpiryDate: "",
-      newValidityDays: "365",
+      certificateId: 0,
       reason: "",
-      priority: "",
     },
   });
 
-  const handleSubmit = (data: RenewalFormData) => {
-    const renewalRequest: RenewalRequest = {
-      ...data,
-      id: crypto.randomUUID(),
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    };
-    onSubmit(renewalRequest);
-    toast.success("Renewal request created successfully");
-    form.reset();
-    setOpen(false);
+  const handleSubmit = async (data: RenewalFormData) => {
+    setIsSubmitting(true);
+    try {
+      // Call the renewal API
+      await certificatesApi.renew(data.certificateId);
+      
+      toast.success("Certificate renewed successfully");
+      
+      // Call onSuccess callback to refresh parent data
+      if (onSuccess) {
+        onSuccess();
+      }
+      
+      // Also create a renewal request object for backward compatibility
+      if (onSubmit) {
+        const cert = certificates.find(c => c.id === data.certificateId);
+        const renewalRequest: RenewalRequest = {
+          ...data,
+          id: crypto.randomUUID(),
+          status: "completed",
+          createdAt: new Date().toISOString(),
+          certificateAlias: cert?.commonName || cert?.certificateName || `cert-${data.certificateId}`,
+          certificateType: "server",
+          currentExpiryDate: cert?.validTo || "",
+          newValidityDays: "365",
+          priority: "medium",
+        };
+        onSubmit(renewalRequest);
+      }
+      
+      form.reset();
+      setOpen(false);
+    } catch (error: any) {
+      console.error("Failed to renew certificate:", error);
+      toast.error(error?.response?.data?.message || "Failed to renew certificate");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -95,126 +148,91 @@ export function CreateRenewalDialog({ onSubmit, children }: CreateRenewalDialogP
         <DialogHeader>
           <DialogTitle>Create Renewal Request</DialogTitle>
           <DialogDescription>
-            Submit a request to renew an existing certificate
+            Select a certificate to renew. The renewal will be processed immediately.
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="certificateAlias"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Certificate Alias</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter certificate alias" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        
+        {isLoadingCerts ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <span className="ml-2 text-sm text-muted-foreground">Loading certificates...</span>
+          </div>
+        ) : (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="certificateId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Certificate *</FormLabel>
+                    <Select 
+                      onValueChange={(value) => field.onChange(parseInt(value))} 
+                      value={field.value?.toString()}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a certificate to renew" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {certificates.length === 0 ? (
+                          <SelectItem value="0" disabled>No certificates available</SelectItem>
+                        ) : (
+                          certificates.map((cert) => (
+                            <SelectItem key={cert.id} value={cert.id.toString()}>
+                              {cert.commonName || cert.certificateName || `Certificate ${cert.id}`}
+                              {cert.validTo && ` (Expires: ${new Date(cert.validTo).toLocaleDateString()})`}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="certificateType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Certificate Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <FormField
+                control={form.control}
+                name="reason"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reason for Renewal (Optional)</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select certificate type" />
-                      </SelectTrigger>
+                      <Textarea 
+                        placeholder="Enter reason for renewal (optional)"
+                        {...field} 
+                      />
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="server">Server Certificate</SelectItem>
-                      <SelectItem value="client">Client Certificate</SelectItem>
-                      <SelectItem value="mutual">Mutual TLS Certificate</SelectItem>
-                      <SelectItem value="ca">CA Certificate</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="currentExpiryDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Current Expiry Date</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="newValidityDays"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>New Validity Period (Days)</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="365" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="priority"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Priority</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select priority" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="critical">Critical</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="reason"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Reason for Renewal</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Explain why this certificate needs renewal"
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Submit Request</Button>
-            </div>
-          </form>
-        </Form>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setOpen(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Renewing...
+                    </>
+                  ) : (
+                    "Renew Certificate"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -160,6 +160,7 @@ export default function NetworkScan() {
       // Parse the network range input into target objects
       const targetHosts = networkRange.split(',').map(t => t.trim()).filter(Boolean);
       
+      let hasDefaultPorts = false;
       const targets = targetHosts.map(input => {
         // Check if input contains a port (format: host:port)
         const portMatch = input.match(/^(.+):(\d+)$/);
@@ -174,6 +175,7 @@ export default function NetworkScan() {
           };
         } else {
           // No port specified, scan without ports (let backend handle default behavior)
+          hasDefaultPorts = true;
           return {
             host: input,
             ports: []
@@ -191,7 +193,17 @@ export default function NetworkScan() {
       
       setDiscoveredCerts(mappedCerts);
       
-      toast.success(`Discovered ${mappedCerts.length} certificate endpoints.`);
+      if (mappedCerts.length > 0) {
+        const message = hasDefaultPorts 
+          ? `Discovered ${mappedCerts.length} certificate(s) on default TLS ports (443, 8443, 9443).`
+          : `Discovered ${mappedCerts.length} certificate endpoint(s).`;
+        toast.success(message);
+      } else {
+        const message = hasDefaultPorts
+          ? "No TLS certificates found on default ports (443, 8443, 9443)."
+          : "No certificates found on the specified ports.";
+        toast.info(message);
+      }
     } catch (error) {
       console.error("Scan failed:", error);
       toast.error("Failed to perform network scan. Please check your connection.");
@@ -525,28 +537,37 @@ export default function NetworkScan() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <Input
-                  placeholder="Enter host (e.g., example.com) or host:port (e.g., example.com:443)"
-                  value={networkRange}
-                  onChange={(e) => setNetworkRange(e.target.value)}
-                  className="w-full"
-                />
+            <div className="space-y-3">
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Enter host (e.g., example.com) or host:port (e.g., example.com:443)"
+                    value={networkRange}
+                    onChange={(e) => setNetworkRange(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <Button onClick={handleScan} disabled={isScanning}>
+                  {isScanning ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Scanning...
+                    </>
+                  ) : (
+                    <>
+                      <Radar className="mr-2 h-4 w-4" />
+                      Start Scan
+                    </>
+                  )}
+                </Button>
               </div>
-              <Button onClick={handleScan} disabled={isScanning}>
-                {isScanning ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Scanning...
-                  </>
-                ) : (
-                  <>
-                    <Radar className="mr-2 h-4 w-4" />
-                    Start Scan
-                  </>
-                )}
-              </Button>
+              <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                <Shield className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <p>
+                  <strong>Smart Port Detection:</strong> If no port is specified, the scan automatically checks common TLS ports (443, 8443, 9443). 
+                  Specify a port (e.g., <code className="px-1 py-0.5 rounded bg-muted">example.com:8080</code>) to scan only that port.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

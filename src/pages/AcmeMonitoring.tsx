@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Webhook, Plus, Search, CheckCircle, XCircle, RefreshCw, Activity, TestTube } from "lucide-react";
 import { toast } from "sonner";
 import { acmeMonitoringApi } from "@/lib/api";
@@ -59,15 +60,38 @@ export default function AcmeMonitoring() {
     }
   };
 
+  const availableEvents = [
+    "ORDER_CREATED",
+    "ORDER_COMPLETED",
+    "ORDER_FAILED",
+    "CHALLENGE_VALIDATED",
+    "CERTIFICATE_ISSUED",
+  ];
+
   const handleCreateWebhook = async () => {
+    if (!formData.url) {
+      toast.error("Webhook URL is required");
+      return;
+    }
+
     try {
       await acmeMonitoringApi.createWebhook(formData);
       toast.success("Webhook created successfully");
       setDialogOpen(false);
+      setFormData({ name: "", url: "", events: [], isActive: true });
       fetchData();
     } catch (error) {
       toast.error("Failed to create webhook");
     }
+  };
+
+  const toggleEvent = (event: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      events: prev.events.includes(event)
+        ? prev.events.filter((e) => e !== event)
+        : [...prev.events, event],
+    }));
   };
 
   const handleTestWebhook = async (id: number) => {
@@ -129,13 +153,39 @@ export default function AcmeMonitoring() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="url">Webhook URL</Label>
+                    <Label htmlFor="url">Webhook URL *</Label>
                     <Input
                       id="url"
                       value={formData.url}
                       onChange={(e) => setFormData({ ...formData, url: e.target.value })}
                       placeholder="https://hooks.example.com/acme"
+                      required
                     />
+                  </div>
+                  <div className="grid gap-3">
+                    <Label>Events to Monitor</Label>
+                    <div className="space-y-2">
+                      {availableEvents.map((event) => (
+                        <div key={event} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={event}
+                            checked={formData.events.includes(event)}
+                            onCheckedChange={() => toggleEvent(event)}
+                          />
+                          <Label
+                            htmlFor={event}
+                            className="text-sm font-normal cursor-pointer"
+                          >
+                            {event.replace(/_/g, " ")}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                    {formData.events.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Select at least one event to monitor
+                      </p>
+                    )}
                   </div>
                 </div>
                 <DialogFooter>
@@ -178,7 +228,7 @@ export default function AcmeMonitoring() {
             <CardContent>
               <div className="flex items-center gap-2">
                 <Webhook className="h-5 w-5 text-blue-500" />
-                <span className="text-2xl font-bold">{webhooks.filter((w) => w.active).length}</span>
+                <span className="text-2xl font-bold">{webhooks.filter((w) => w.isActive).length}</span>
               </div>
             </CardContent>
           </Card>
@@ -278,6 +328,7 @@ export default function AcmeMonitoring() {
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>URL</TableHead>
+                      <TableHead>Events</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Failures</TableHead>
                       <TableHead>Last Triggered</TableHead>
@@ -288,15 +339,18 @@ export default function AcmeMonitoring() {
                     {(() => {
                       // Filter webhooks based on search and status
                       const filtered = webhooks.filter((webhook) => {
+                        const eventsStr = Array.isArray(webhook.events)
+                          ? webhook.events.join(', ')
+                          : webhook.events || '';
                         const matchesSearch = !searchQuery || 
                           webhook.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           webhook.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (typeof webhook.events === 'string' ? webhook.events : webhook.events?.join(','))?.toLowerCase().includes(searchQuery.toLowerCase());
+                          eventsStr.toLowerCase().includes(searchQuery.toLowerCase());
                         
                         const matchesStatus = 
                           activeFilter === 'all' ||
-                          (activeFilter === 'active' && webhook.active) ||
-                          (activeFilter === 'inactive' && !webhook.active);
+                          (activeFilter === 'active' && webhook.isActive) ||
+                          (activeFilter === 'inactive' && !webhook.isActive);
                         
                         return matchesSearch && matchesStatus;
                       });
@@ -304,45 +358,62 @@ export default function AcmeMonitoring() {
                       if (filtered.length === 0) {
                         return (
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                            <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                               No webhooks found
                             </TableCell>
                           </TableRow>
                         );
                       }
 
-                      return filtered.map((webhook) => (
-                        <TableRow key={webhook.id}>
-                          <TableCell className="font-medium">{webhook.name || 'Unnamed Webhook'}</TableCell>
-                          <TableCell className="max-w-xs truncate font-mono text-sm">{webhook.url}</TableCell>
-                          <TableCell>
-                            <Badge className={webhook.active ? "bg-green-500/10 text-green-500" : "bg-gray-500/10 text-gray-500"}>
-                              {webhook.active ? "Active" : "Inactive"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {webhook.failureCount > 0 ? (
-                              <Badge variant="destructive">{webhook.failureCount}</Badge>
-                            ) : (
-                              <span className="text-muted-foreground">0</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {webhook.lastSuccessAt
-                              ? new Date(webhook.lastSuccessAt).toLocaleString()
-                              : "Never"}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleTestWebhook(webhook.id)}
-                            >
-                              <TestTube className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ));
+                      return filtered.map((webhook) => {
+                        const events = Array.isArray(webhook.events) ? webhook.events : [];
+                        
+                        return (
+                          <TableRow key={webhook.id}>
+                            <TableCell className="font-medium">{webhook.name || 'Unnamed Webhook'}</TableCell>
+                            <TableCell className="max-w-xs truncate font-mono text-sm">{webhook.url}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1 max-w-xs">
+                                {events.length > 0 ? (
+                                  events.map((event) => (
+                                    <Badge key={event} variant="outline" className="text-xs">
+                                      {event.replace(/_/g, ' ')}
+                                    </Badge>
+                                  ))
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">No events</span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={webhook.isActive ? "bg-green-500/10 text-green-500" : "bg-gray-500/10 text-gray-500"}>
+                                {webhook.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {webhook.failureCount > 0 ? (
+                                <Badge variant="destructive">{webhook.failureCount}</Badge>
+                              ) : (
+                                <span className="text-muted-foreground">0</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {webhook.lastTriggered
+                                ? new Date(webhook.lastTriggered).toLocaleString()
+                                : "Never"}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleTestWebhook(webhook.id)}
+                              >
+                                <TestTube className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      });
                     })()}
                   </TableBody>
                 </Table>
